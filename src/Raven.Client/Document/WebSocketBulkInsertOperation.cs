@@ -3,14 +3,12 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Platform;
 using Raven.Json.Linq;
@@ -40,7 +38,7 @@ namespace Raven.Client.Document
         private DateTime _lastHeartbeat;
         private long _sentAccomulator;
 
-        private AsyncManualResetEvent _throttlingEvent = new AsyncManualResetEvent();
+        private readonly AsyncManualResetEvent _throttlingEvent = new AsyncManualResetEvent();
         private bool  _isThrottling;
         private readonly long _maxDiffSizeBeforeThrottling = 3L*1024*1024;
 
@@ -63,7 +61,7 @@ namespace Raven.Client.Document
             _unmanagedBuffersPool = new UnmanagedBuffersPool("bulk/insert/client");
             _jsonOperationContext = new JsonOperationContext(_unmanagedBuffersPool);
             _networkBufferWriter = new BinaryWriter(_networkBuffer);
-            this._cts = cts ?? new CancellationTokenSource();
+            _cts = cts ?? new CancellationTokenSource();
             _connection = new RavenClientWebSocket();
             _url = asyncServerClient.Url;
 
@@ -91,13 +89,11 @@ namespace Raven.Client.Document
 
         private async Task<int> WriteToServer()
         {
-
-            const string DebugTag = "bulk/insert/document";
+            const string debugTag = "bulk/insert/document";
             var jsonParserState = new JsonParserState();
             var buffer = _jsonOperationContext.GetManagedBuffer();
-            using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, DebugTag))
+            using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, debugTag))
             {
-
                 while (_documents.IsCompleted == false)
                 {
                     _cts.Token.ThrowIfCancellationRequested();
@@ -114,7 +110,7 @@ namespace Raven.Client.Document
                     }
 
                     using (var builder = new BlittableJsonDocumentBuilder(_jsonOperationContext,
-                        BlittableJsonDocumentBuilder.UsageMode.ToDisk, DebugTag,
+                        BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag,
                         jsonParser, jsonParserState))
                     {
 
@@ -172,6 +168,7 @@ namespace Raven.Client.Document
                 {
                     if (result.CloseStatus != null)
                     {
+                        // TODO: Change this method to TryReadFromWebsocket
 
                         // TODO: Should we ignore? Console.WriteLine("*************ERRR");
                         return null;
@@ -200,6 +197,7 @@ namespace Raven.Client.Document
                         await ReadFromWebSocket(context, _connection, "Bulk/Insert/GetServerResponse", _cts.Token))
                     {
                         // TODO :: do we need to ignore here? 
+                        // TODO: No, if we have a disconnection, we are not handling it as usual
                         if (response == null)
                             continue;
                         //if (response == null)
@@ -240,6 +238,7 @@ namespace Raven.Client.Document
                                             throw new InvalidOperationException("Invalid Processed response from server " +
                                                                                 (response.ToString() ?? "null"));
 
+                                        // TODO: Not thread safe
                                         if (_sentAccomulator - processedSize > _maxDiffSizeBeforeThrottling)
                                         {
                                             if (_isThrottling == false)
@@ -250,7 +249,7 @@ namespace Raven.Client.Document
                                         }
                                         else
                                         {
-                                            if (_isThrottling == true)
+                                            if (_isThrottling)
                                             {
                                                 _isThrottling = false;
                                                 _throttlingEvent.Set();
@@ -293,8 +292,6 @@ namespace Raven.Client.Document
                     }
                 } while (completed == false);
             }
-
-          
         }
 
         public async Task WriteAsync(string id, RavenJObject metadata, RavenJObject data)
@@ -305,13 +302,13 @@ namespace Raven.Client.Document
 
             if (_getServerResponseTask.IsFaulted || _getServerResponseTask.IsCanceled)
             {
-                await _getServerResponseTask;
+                await _getServerResponseTask.ConfigureAwait(false);
                 return;// we should never actually get here, the await will throw
             }
 
             if (_writeToServerTask.IsFaulted || _writeToServerTask.IsCanceled)
             {
-                await _getServerResponseTask;
+                await _writeToServerTask.ConfigureAwait(false);
                 return;// we should never actually get here, the await will throw
             }
 
@@ -343,6 +340,8 @@ namespace Raven.Client.Document
             await _connection.SendAsync(segment, WebSocketMessageType.Binary, true, _cts.Token)
                 .ConfigureAwait(false);
 
+
+            // TODO: Not thread safe
             _sentAccomulator += _networkBuffer.Length;
 
             ReportProgress($"Batch sent to {_url} (bytes count = {segment.Count})");
@@ -367,7 +366,7 @@ namespace Raven.Client.Document
                     _documents.CompleteAdding();
                     try
                     {
-                        await _writeToServerTask;
+                        await _writeToServerTask.ConfigureAwait(false);
                     }
                     catch
                     {

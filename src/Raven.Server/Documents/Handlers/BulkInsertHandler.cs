@@ -48,11 +48,9 @@ namespace Raven.Server.Documents.Handlers
         {
             public int Used;
             public UnmanagedBuffersPool.AllocatedMemoryData Buffer;
-            public int Number;
         }
 
         private WebSocket _webSocket;
-        private long _processedAccomulator;
 
         public unsafe void InsertDocuments()
         {
@@ -108,6 +106,7 @@ namespace Raven.Server.Documents.Handlers
                                         if (reader.TryGet(Constants.Metadata, out metadata) == false ||
                                             metadata.TryGet(Constants.MetadataDocId, out docKey) == false)
                                         {
+                                            //TODO: Better error
                                             const string message = "bad doc key";
                                             throw new InvalidDataException(message);
                                         }
@@ -194,8 +193,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/bulkInsert", "GET", "/databases/{databaseName:string}/bulkInsert")]
         public async Task BulkInsert()
         {
-            var unmanagedBuffersPool = new UnmanagedBuffersPool("bulk/insert/server");
-
+            long processedAccomulator = 0;
             DocumentsOperationContext context;
             using (_webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             using (ContextPool.AllocateOperationContext(out context))
@@ -229,7 +227,7 @@ namespace Raven.Server.Documents.Handlers
                             }
                             var result = await receiveAsync;
 
-                            _processedAccomulator += result.Count;
+                            processedAccomulator += result.Count;
 
                             stream.Write(buffer.Array, 0, result.Count);
                             if (result.EndOfMessage == false)
@@ -242,7 +240,7 @@ namespace Raven.Server.Documents.Handlers
                                 {
                                     _fullBuffers.Add(current);
                                 }
-                                catch (Exception exception)
+                                catch (Exception)
                                 {
                                     break;
                                     // error in the actual insert, we'll get it when we await on the insert task
@@ -250,11 +248,10 @@ namespace Raven.Server.Documents.Handlers
 
                                 while (_freeBuffers.TryTake(out current, 1000) == false)
                                 {
-                                    ArraySegment<byte> processedMsg = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'Processed', 'Size': " + _processedAccomulator + "}")); // TODO :: make field?
+                                    // TODO: Properly build and send the JSON
+                                    ArraySegment<byte> processedMsg = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'Processed', 'Size': " + processedAccomulator + "}")); // TODO :: make field?
                                     await _webSocket.SendAsync(processedMsg, WebSocketMessageType.Text, true, Database.DatabaseShutdown)
                                         .ConfigureAwait(false);
-                                    //await _webSocket.SendAsync(ProcessingMessage, WebSocketMessageType.Text, true,
-                                    //    Database.DatabaseShutdown);
                                 }
 
                                 if (current.Buffer.SizeInBytes < stream.SizeInBytes)
@@ -263,7 +260,7 @@ namespace Raven.Server.Documents.Handlers
                                     current.Buffer = context.GetMemory(Bits.NextPowerOf2(stream.SizeInBytes));
                                 }
 
-                                ArraySegment<byte> processed = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'Processed', 'Size': " + _processedAccomulator + "}")); // TODO :: make field?
+                                ArraySegment<byte> processed = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'Processed', 'Size': " + processedAccomulator + "}")); // TODO :: make field?
                                 await _webSocket.SendAsync(processed, WebSocketMessageType.Text, true, Database.DatabaseShutdown)
                                     .ConfigureAwait(false);
 
@@ -306,6 +303,7 @@ namespace Raven.Server.Documents.Handlers
                     _fullBuffers.CompleteAdding();
                     try
                     {
+                        //TODO: Fix error 
                         await _webSocket.CloseOutputAsync(WebSocketCloseStatus.InternalServerError,
                             // yuck
                            "{'Type': 'Error', 'Exception': '"  + e.ToString().Replace("'","\\'") + "'}", 
