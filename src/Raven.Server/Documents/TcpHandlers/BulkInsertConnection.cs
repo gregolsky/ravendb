@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     _insertDocuments.Wait();
                 }
-                catch (Exception )
+                catch (Exception)
                 {
                     // forcing observation of any potential errors
                 }
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 _replyToCustomer.Wait();
             }
-            catch (Exception )
+            catch (Exception)
             {
                 // we don't care about any errors here, we just need to make sure that the thread
                 // isn't sending stuff to the client while we are sending the error
@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
 
                         var retry = 60;
-                        while(_docsToWrite.TryTake(out doc, 500) == false)
+                        while (_docsToWrite.TryTake(out doc, 500) == false)
                         {
                             if (_docsToWrite.IsCompleted == false)
                                 break;
@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 try
                 {
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Writing {docsToWrite.Count:#,#} documents to disk using bulk insert, total {totalSize/1024:#,#} kb to write");
+                        _logger.Info($"Writing {docsToWrite.Count:#,#} documents to disk using bulk insert, total {totalSize / 1024:#,#} kb to write");
                     Stopwatch sp = Stopwatch.StartNew();
                     using (var tx = context.OpenWriteTransaction())
                     {
@@ -273,7 +273,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private void ReadBulkInsert()
         {
-            var managedBuffer = new byte[1024*32];
+            var managedBuffer = new byte[1024 * 32];
             fixed (byte* managedBufferPointer = managedBuffer)
             {
                 while (true)
@@ -380,13 +380,19 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         logger.Info("Failed to process bulk insert run", e);
                     }
-                    using (var writer = new BlittableJsonTextWriter(context, stream))
+                    try
                     {
-                        context.Write(writer, new DynamicJsonValue
+                        using (var writer = new BlittableJsonTextWriter(context, stream))
                         {
-                            ["Type"] = "Error",
-                            ["Exception"] = e.ToString()
-                        });
+                            context.Write(writer, new DynamicJsonValue
+                            {
+                                ["Type"] = "Error",
+                                ["Exception"] = e.ToString()
+                            });
+                        }
+                    }
+                    catch (Exception)
+                    {
                     }
                 }
                 finally
