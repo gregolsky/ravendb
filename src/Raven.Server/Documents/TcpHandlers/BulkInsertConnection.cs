@@ -15,7 +15,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron.Exceptions;
 
-namespace Raven.Server.Documents.BulkInsert
+namespace Raven.Server.Documents.TcpHandlers
 {
     public unsafe class BulkInsertConnection : IDisposable
     {
@@ -401,6 +401,13 @@ namespace Raven.Server.Documents.BulkInsert
                     try
                     {
                         tcpClient.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    try
+                    {
+                        context.Dispose();
                     }
                     catch (Exception)
                     {
