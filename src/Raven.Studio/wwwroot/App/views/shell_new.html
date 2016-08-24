@@ -112,7 +112,7 @@
             <span data-bind="css: item.css"></span>
             <span data-bind="text: item.title"></span>
         </a>
-        <div data-bind="css: 'level-' + level, attr: { 'data-level-name': item.title }" class="level" >
+        <div data-bind="css: 'level-' + level, attr: { 'data-level-name': item.title, 'data-level': level }" class="level" >
             <h2 data-bind="text: item.title"></h2>
             <a class="back" title="back">back</a>
 
@@ -134,7 +134,7 @@
 </script>
 
 <nav id="main-menu" class="main-menu">
-    <div class="level-0" data-level-name="Menu">
+    <div class="level-0" data-level="0" data-level-name="Menu">
         <ul data-bind="foreach: mainMenu.items">
             <!-- ko template: { name: type + 'MenuItem', data: { item: $data, level: 1 } } -->
             <!-- /ko -->

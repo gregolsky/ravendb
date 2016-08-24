@@ -15,10 +15,10 @@ export interface menuItem {
 }
 
 export class separatorMenuItem implements menuItem {
-    title: string;
+    title?: string;
     type: menuItemType = "separator";
 
-    constructor(title: string) {
+    constructor(title?: string) {
         this.title = title;
     }
 }
@@ -114,14 +114,51 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
 }
 
 function getResourcesMenuItem(appUrls: computedAppUrls, opts: GenerateMenuItemOptions) {
-    return new leafMenuItem({
+    var items = [
+        new leafMenuItem({
             route: ["", "resources"],
-            title: "Resources",
+            title: "Dashboard",
+            moduleId: "viewmodels/resources/resources",
+            nav: true,
+            css: 'fa fa-dashboard',
+            hash: appUrls.resourcesManagement
+        }),
+        new separatorMenuItem(),
+        new leafMenuItem({
+            route: [""],
+            title: "New database",
             moduleId: "viewmodels/resources/resources",
             nav: true,
             css: 'icon-resources',
             hash: appUrls.resourcesManagement
-        });
+        }),
+        new leafMenuItem({
+            route: [""],
+            title: "New filesystem",
+            moduleId: "viewmodels/resources/resources",
+            nav: true,
+            css: 'icon-resources',
+            hash: appUrls.resourcesManagement
+        }),
+        new leafMenuItem({
+            route: [""],
+            title: "New counter",
+            moduleId: "viewmodels/resources/resources",
+            nav: true,
+            css: 'icon-resources',
+            hash: appUrls.resourcesManagement
+        }),
+        new leafMenuItem({
+            route: [""],
+            title: "New time serie",
+            moduleId: "viewmodels/resources/resources",
+            nav: true,
+            css: 'icon-resources',
+            hash: appUrls.resourcesManagement
+        })
+    ];
+
+    return new intermediateMenuItem("Resources", items, "icon-resources");
 }
 
 function getStatsMenuItem(

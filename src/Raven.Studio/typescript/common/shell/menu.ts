@@ -1,5 +1,6 @@
 import * as EVENTS from "common/constants/events";
 import database = require("models/resources/database");
+import router = require("plugins/router");
 import {
     generateMenuItems,
     menuItem,
@@ -10,7 +11,7 @@ class menu {
 
     private $mainMenu: JQuery;
     private $mainMenuAnchors: JQuery;
-    private $mainMenuLists: JQuery;
+    private $mainMenuLevels: JQuery;
 
     private level: number;
     private type: string = 'menu';
@@ -20,7 +21,15 @@ class menu {
     routerConfiguration(): Array<DurandalRouteConfiguration> {
         return this.items
             .map(getMenuItemDurandalRoutes)
-            .reduce((result, next) => result.concat(next), []);
+            .reduce((result, next) => result.concat(next), [])
+            .reduce((result: any[], next: any) => {
+                let nextJson = JSON.stringify(next);
+                if (!result.some(x => JSON.stringify(x) === nextJson)) {
+                    result.push(next);
+                }
+
+                return result;
+            }, []) as Array<DurandalRouteConfiguration>;
     }
 
     static convertToDurandalRoute(leaf: leafMenuItem): DurandalRouteConfiguration {
@@ -44,36 +53,82 @@ class menu {
     initialize () {
         this.$mainMenu = $('#main-menu');
         this.$mainMenuAnchors = $('#main-menu a');
-        this.$mainMenuLists = $('#main-menu ul');
+        this.$mainMenuLevels = $('#main-menu [data-level]');
 
         let self = this;
         this.$mainMenuAnchors.on('click', function (e) {
-            var a = this as HTMLAnchorElement;
-            var $list = $(a).closest('ul');
-            var hasOpenSubmenus = $list.find('.level-show').length;
-            var isOpenable = $(a).siblings('.level').length;
+            let a = this as HTMLAnchorElement;
+            let $a = $(a);
+            if ($a.is('.back')) {
+                return handleBack();
+            }
+
+            let deepestOpenLevel = self.getDeepestOpenLevelElement();
+            if (deepestOpenLevel && $(deepestOpenLevel).find(a).length === 0) {
+                return;
+            }
+
+            let $list = $a.closest('.level');
+            let hasOpenSubmenus = $list.find('.level-show').length;
+            let isOpenable = $a.siblings('.level').length;
 
             if (!hasOpenSubmenus && isOpenable) {
-                $(a).parent().children('.level').addClass('level-show');
+                $a.parent().children('.level').addClass('level-show');
                 e.stopPropagation();
             }
 
             self.updateLevel();
+
+            function handleBack() {
+                $a.closest('.level').removeClass('level-show');
+                self.updateLevel();
+            }
         });
 
-        this.$mainMenuLists.on('click', e => {
+        this.$mainMenuLevels.on('click', function (e) {
             e.stopPropagation();
 
-            this.$mainMenuLists
+            let clickedLevelElement = this as HTMLElement;
+            let deepestOpenLevelElement = self.getDeepestOpenLevelElement();
+            if (clickedLevelElement === deepestOpenLevelElement) {
+                return;
+            }
+
+            $(clickedLevelElement)
                 .find('.level-show')
                 .removeClass('level-show');
 
-            this.updateLevel();
+            self.updateLevel();
+
+
         });
 
         let $body = $('body');
         $('.menu-collapse-button').click(
             () => $body.toggleClass('menu-collapse'));
+    }
+
+    private getDeepestOpenLevelElement() {
+        return this.$mainMenuLevels.find('.level-show')
+            .toArray()
+            .reduce((result: HTMLElement, nextEl: HTMLElement) => {
+                if (!result) {
+                    return nextEl;
+                }
+
+                var resultLevel = this.parseLevel(result);
+                var curLevel = this.parseLevel(nextEl);
+
+                if (resultLevel > curLevel) {
+                    return result;
+                }
+
+                return nextEl;
+            }, null);
+    }
+
+    private parseLevel(el: HTMLElement) {
+        return parseInt(el.dataset['level']);
     }
 
     private emitLevelChanged() {
