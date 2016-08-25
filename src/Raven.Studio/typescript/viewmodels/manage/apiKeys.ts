@@ -11,8 +11,6 @@ class apiKeys extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
     noResults = ko.observable<boolean>(false);
 
-    settingsAccess = new settingsAccessAuthorizer();
-
     constructor() {
         super();
         this.searchText.throttle(200).subscribe(value => this.filterKeys(value));
@@ -21,7 +19,7 @@ class apiKeys extends viewModelBase {
     canActivate(args: any) {
         var deferred = $.Deferred();
 
-        if (this.settingsAccess.isForbidden()) {
+        if (settingsAccessAuthorizer.isForbidden()) {
             deferred.resolve({ can: true });
         } else {
             this.fetchApiKeys().done(() => deferred.resolve({ can: true }));
@@ -34,12 +32,12 @@ class apiKeys extends viewModelBase {
         super.activate(args);
         this.updateHelpLink('9CGJ4Y');
         this.dirtyFlag = new ko.DirtyFlag([this.apiKeys]);
-        this.isSaveEnabled = ko.computed(() => !this.settingsAccess.isReadOnly() && this.dirtyFlag().isDirty());
+        this.isSaveEnabled = ko.computed(() => !settingsAccessAuthorizer.isReadOnly() && this.dirtyFlag().isDirty());
     }
 
     compositionComplete() {
         super.compositionComplete();
-        if (this.settingsAccess.isReadOnly()) {
+        if (settingsAccessAuthorizer.isReadOnly()) {
             $('#manageApiKeys input:not(#apiKeysSearchInput)').attr('readonly', 'readonly');
             $('#manageApiKeys button').attr('disabled', 'true');
         }
