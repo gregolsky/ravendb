@@ -2,6 +2,7 @@ import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
+import accessHelper = require("viewmodels/shell/accessHelper");
 
 import alert = require("models/database/debug/alert");
 import resource = require("models/resources/resource");
@@ -49,7 +50,7 @@ class resources extends viewModelBase {
     optionsClicked = ko.observable<boolean>(false);
     appUrls: computedAppUrls;
     alerts = ko.observable<alert[]>([]);
-    isGlobalAdmin = shell.isGlobalAdmin;
+    isGlobalAdmin = accessHelper.isGlobalAdmin;
     clusterMode = ko.computed(() => shell.clusterMode());
     developerLicense = ko.computed(() => !license.licenseStatus() || !license.licenseStatus().IsCommercial);
     showCreateCluster = ko.computed(() => !shell.clusterMode());
@@ -82,7 +83,8 @@ class resources extends viewModelBase {
             ]);
         }
 
-        this.canNavigateToAdminSettings = ko.computed(() => shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings());
+        this.canNavigateToAdminSettings = ko.computed(() =>
+            accessHelper.isGlobalAdmin() || accessHelper.canReadWriteSettings() || accessHelper.canReadSettings());
 
         this.databases = shell.databases;
         this.fileSystems = shell.fileSystems;

@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 import * as EVENTS from "common/constants/events";
 import database = require("models/resources/database");
 import router = require("plugins/router");
@@ -17,6 +19,8 @@ class menu {
     private type: string = 'menu';
 
     items: Array<menuItem>;
+
+    private itemsIndex: KnockoutComputed<{ [key: string]: leafMenuItem }>;
 
     routerConfiguration(): Array<DurandalRouteConfiguration> {
         return this.items
@@ -38,7 +42,7 @@ class menu {
             title: leaf.title,
             moduleId: leaf.moduleId,
             nav: leaf.nav,
-            dynamicHash: leaf.hash
+            dynamicHash: leaf.dynamicHash
         };
     }
 
@@ -48,6 +52,7 @@ class menu {
         isGlobalAdmin: KnockoutObservable<boolean>
     }) {
         this.items = generateMenuItems(opts);
+        this.itemsIndex = ko.computed(() => this.calculateMenuItemsIndex());
     }
 
     initialize () {
@@ -55,7 +60,7 @@ class menu {
         this.$mainMenuAnchors = $('#main-menu a');
         this.$mainMenuLevels = $('#main-menu [data-level]');
 
-        let self = this;
+        let self: menu = this;
         this.$mainMenuAnchors.on('click', function (e) {
             let a = this as HTMLAnchorElement;
             let $a = $(a);
@@ -99,13 +104,60 @@ class menu {
                 .removeClass('level-show');
 
             self.updateLevel();
-
-
         });
 
         let $body = $('body');
         $('.menu-collapse-button').click(
             () => $body.toggleClass('menu-collapse'));
+
+        router.on('router:navigation:complete', () => {
+            this.setActiveMenuItem();
+        });
+
+        this.setActiveMenuItem();
+    }
+
+    private setActiveMenuItem() {
+        let hashToItem = this.itemsIndex();
+        let item: leafMenuItem = hashToItem[document.location.hash];
+
+        if (!item) {
+            return;
+        }
+
+        this.$mainMenu.find('li').removeClass('active');
+        this.$mainMenuLevels.removeClass('level-show');
+
+        $(`#main-menu a[href='${item.path()}']`)
+            .parent()
+            .addClass('active')
+            .parents('.level')
+            .addClass('level-show');
+
+        this.updateLevel();
+    }
+
+    private calculateMenuItemsIndex(): ({ [key: string]: leafMenuItem }) {
+        return this.items
+            .reduce((result: menuItem[], next: menuItem) =>
+                result.concat(flatten(next)), [] as menuItem[])
+            .filter((x: leafMenuItem) => !!x.path())
+            .reduce((result: { [key: string]: leafMenuItem }, next: leafMenuItem) => {
+                result[next.path()] = next;
+                return result;
+            }, {} as { [key: string]: leafMenuItem });
+
+        function flatten(item: menuItem): Array<menuItem> {
+            if (item.type === 'intermediate') {
+                return (item as intermediateMenuItem).children
+                    .map(flatten)
+                    .reduce((result, child) => result.concat(child), []);
+            } else if (item.type === 'leaf') {
+                return [ item ];
+            }
+
+            return [];
+        }
     }
 
     private getDeepestOpenLevelElement() {

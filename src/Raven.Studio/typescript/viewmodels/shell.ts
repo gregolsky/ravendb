@@ -60,6 +60,7 @@ import getClusterTopologyCommand = require("commands/database/cluster/getCluster
 import getStudioConfig = require("commands/getStudioConfig");
 
 import viewModelBase = require("viewmodels/viewModelBase");
+import accessHelper = require("viewmodels/shell/accessHelper");
 import licensingStatus = require("viewmodels/common/licensingStatus");
 import recentErrors = require("viewmodels/common/recentErrors");
 import enterApiKey = require("viewmodels/common/enterApiKey");
@@ -79,10 +80,6 @@ class shell extends viewModelBase {
     renewOAuthTokenTimeoutId: number;
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
     showLogOutButton: KnockoutComputed<boolean>;
-    static isGlobalAdmin = ko.observable<boolean>(false);
-    static canReadWriteSettings = ko.observable<boolean>(false);
-    static canReadSettings = ko.observable<boolean>(false);
-    static canExposeConfigOverTheWire = ko.observable<boolean>(false);
     maxResourceNameWidth: KnockoutComputed<string>;
     isLoadingStatistics = ko.computed(() => !!this.lastActivatedResource() && !this.lastActivatedResource().statistics()).extend({ throttle: 100 });
 
@@ -166,8 +163,8 @@ class shell extends viewModelBase {
     supportStatus = license.supportCssClass;
 
     mainMenu = new menu({
-        canExposeConfigOverTheWire: shell.canExposeConfigOverTheWire,
-        isGlobalAdmin: shell.isGlobalAdmin,
+        canExposeConfigOverTheWire: accessHelper.canExposeConfigOverTheWire,
+        isGlobalAdmin: accessHelper.isGlobalAdmin,
         activeDatabase: this.activeDatabase
     });
     searchBox = new searchBox();
@@ -985,10 +982,10 @@ class shell extends viewModelBase {
         new getServerConfigsCommand()
             .execute()
             .done((serverConfigs: serverConfigsDto) => {
-                shell.isGlobalAdmin(serverConfigs.IsGlobalAdmin);
-                shell.canReadWriteSettings(serverConfigs.CanReadWriteSettings);
-                shell.canReadSettings(serverConfigs.CanReadSettings);
-                shell.canExposeConfigOverTheWire(serverConfigs.CanExposeConfigOverTheWire);
+                accessHelper.isGlobalAdmin(serverConfigs.IsGlobalAdmin);
+                accessHelper.canReadWriteSettings(serverConfigs.CanReadWriteSettings);
+                accessHelper.canReadSettings(serverConfigs.CanReadSettings);
+                accessHelper.canExposeConfigOverTheWire(serverConfigs.CanExposeConfigOverTheWire);
             })
             .always(() => deferred.resolve());
 
