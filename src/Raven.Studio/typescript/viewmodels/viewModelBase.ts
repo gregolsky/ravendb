@@ -212,7 +212,7 @@ class viewModelBase {
     }
 
     cleanupNotifications() {
-        this.notifications.forEach((notification: changeSubscription) => notification.off());
+        //TODO: this.notifications.forEach((notification: changeSubscription) => notification.off());
         this.notifications = [];
     }
 

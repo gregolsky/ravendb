@@ -11,7 +11,7 @@ import ace = require("ace/ace");
 class aceEditorBindingHandler {
 
     defaults = {
-        theme: "ace/theme/xcode",
+        theme: "ace/theme/ambiance",
         fontSize: "16px",
         lang: "ace/mode/csharp",
         readOnly: false,

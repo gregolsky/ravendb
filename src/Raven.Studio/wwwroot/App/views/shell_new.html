@@ -112,7 +112,7 @@
             <span data-bind="css: item.css"></span>
             <span data-bind="text: item.title"></span>
         </a>
-        <div data-bind="css: 'level-' + level, attr: { 'data-level-name': item.title, 'data-level': level }" class="level" >
+        <div data-bind="css: 'level-' + level, attr: { 'data-level-name': item.title, 'data-level': level }" class="level">
             <h2 data-bind="text: item.title"></h2>
             <a class="back" title="back">back</a>
 
@@ -129,7 +129,7 @@
     <h3 data-bind="text: item.title"></h3>
     <!-- /ko -->
     <!-- ko if: !item.title -->
-    <hr/>
+    <hr />
     <!-- /ko -->
 </script>
 
@@ -142,8 +142,4 @@
     </div>
 </nav>
 
-<div class="container-fluid content-container">
-    <div class="content-container-margin">
-        <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
-    </div>
-</div>
+<div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
