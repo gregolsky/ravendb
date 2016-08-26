@@ -7,7 +7,7 @@ class getIndexDefinitionCommand extends commandBase {
     }
 
     execute(): JQueryPromise<indexDefinitionContainerDto> {
-        var url = "/indexes";
+        var url = "/indexes";//TODO: use endpoints
         var args = {
             name: this.indexName
         }

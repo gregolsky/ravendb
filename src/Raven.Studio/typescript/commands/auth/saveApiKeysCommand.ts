@@ -2,6 +2,7 @@ import executeBulkDocsCommand = require("commands/database/documents/executeBulk
 import apiKey = require("models/auth/apiKey");
 
 class saveApiKeysCommand extends executeBulkDocsCommand {
+    //TODO: use new dedicated endpoint
     constructor(apiKeys: apiKey[], deletedApiKeys: apiKey[]) {
         var newApiKeysBulkDocs = apiKeys.map(k => k.toBulkDoc("PUT"));
         var deletedApiKeysBulkDocs = deletedApiKeys.map(k => k.toBulkDoc("DELETE"));

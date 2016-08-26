@@ -10,7 +10,7 @@ class generateClassCommand extends commandBase {
 
     execute(): JQueryPromise<string> {
 
-        var url = "/generate/code";
+        var url = "/generate/code";//TODO: use endpoints
         var args = {
             docId: this.docId,
             lang: this.lang
