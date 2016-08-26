@@ -63,53 +63,18 @@
                         </div>
                     </div>
                 </div>
-                <div class="select-database-container">
+                <div class="select-database-container" data-bind="with: resourceSwitcher">
                     <div class="form-control btn-toggle select-database">
-                        <span class="database">db/IdentityTryOuts</span>
+                        <span class="database" data-bind="text: $root.lastActivatedResource() ? $root.lastActivatedResource().name:''"></span>
                     </div>
                     <div class="box-container">
                         <div class="database-filter-container">
-                            <input type="search" class="database-filter form-control" placeholder="filter" />
+                            <input type="search" class="database-filter form-control" data-bind="textInput: filter" placeholder="filter" />
                         </div>
                         <div class="scroller">
                             <section>
-                                <ul class="database-list">
-                                    <li><a href="#" class="database">brickpile</a></li>
-                                    <li><a href="#" class="database">brics</a></li>
-                                    <li><a href="#" class="database">fs</a></li>
-                                    <li><a href="#" class="database">IdentityTests</a></li>
-                                    <li><a href="#" class="database">IdentityTryOuts</a></li>
-                                    <li><a href="#" class="filesystem">jspatchtest</a></li>
-                                    <li><a href="#" class="database">logs</a></li>
-                                    <li><a href="#" class="database">Media</a></li>
-                                    <li><a href="#" class="database">Northwind</a></li>
-                                    <li><a href="#" class="database">QuartzDemo</a></li>
-                                    <li><a href="#" class="database">r1</a></li>
-                                    <li><a href="#" class="database">rep1</a></li>
-                                    <li><a href="#" class="filesystem">rep2</a></li>
-                                    <li><a href="#" class="filesystem">sortings</a></li>
-                                    <li><a href="#" class="database">T1</a></li>
-                                    <li><a href="#" class="database">test</a></li>
-                                    <li><a href="#" class="counter">test2</a></li>
-                                    <li><a href="#" class="timeseries">ThisIsTest</a></li>
-                                    <li><a href="#" class="database">brickpile</a></li>
-                                    <li><a href="#" class="database">brics</a></li>
-                                    <li><a href="#" class="database">fs</a></li>
-                                    <li><a href="#" class="database">IdentityTests</a></li>
-                                    <li><a href="#" class="database">IdentityTryOuts</a></li>
-                                    <li><a href="#" class="filesystem">jspatchtest</a></li>
-                                    <li><a href="#" class="database">logs</a></li>
-                                    <li><a href="#" class="database">Media</a></li>
-                                    <li><a href="#" class="database">Northwind</a></li>
-                                    <li><a href="#" class="database">QuartzDemo</a></li>
-                                    <li><a href="#" class="database">r1</a></li>
-                                    <li><a href="#" class="database">rep1</a></li>
-                                    <li><a href="#" class="filesystem">rep2</a></li>
-                                    <li><a href="#" class="filesystem">sortings</a></li>
-                                    <li><a href="#" class="database">T1</a></li>
-                                    <li><a href="#" class="database">test</a></li>
-                                    <li><a href="#" class="counter">test2</a></li>
-                                    <li><a href="#" class="timeseries">ThisIsTest</a></li>
+                                <ul class="database-list" data-bind="foreach: filteredResources">
+                                    <li><a href="#" data-bind="click: $root.selectResource.bind($root, $data), text: name" class="database"></a></li>
                                 </ul>
                             </section>
                         </div>

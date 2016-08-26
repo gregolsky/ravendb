@@ -123,7 +123,7 @@ class shell extends viewModelBase {
         activeDatabase: this.activeDatabase
     });
     searchBox = new searchBox();
-    resourceSwitcher = new resourceSwitcher();
+    resourceSwitcher = new resourceSwitcher(shell.resources);
 
     private globalChangesApi: changesApi;
     private static changeSubscriptionArray: changeSubscription[];

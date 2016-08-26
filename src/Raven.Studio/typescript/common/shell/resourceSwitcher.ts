@@ -1,6 +1,7 @@
 ﻿
 import * as EVENTS from "common/constants/events"
 
+import resource = require("models/resources/resource");
 /*
     Events emitted through ko.postbox
         * ResourceSwitcher.Show - when searchbox is opened
@@ -12,6 +13,25 @@ class resourceSwitcher {
     private $selectDatabaseContainer: JQuery;
     private $selectDatabase: JQuery;
     private $filter: JQuery;
+
+    private resources: KnockoutComputed<resource[]>;
+
+    filter = ko.observable<string>();
+    filteredResources: KnockoutComputed<resource[]>;
+
+    constructor(resources: KnockoutComputed<resource[]>) {
+        this.resources = resources;
+
+        this.filteredResources = ko.computed(() => {
+            const filter = this.filter();
+            const resources = this.resources();
+
+            if (!filter)
+                return resources;
+
+            return resources.filter(x => x.name.toLowerCase().contains(filter.toLowerCase()));
+        });
+    }
 
     initialize() {
         this.$selectDatabaseContainer = $('.select-database-container');
@@ -35,7 +55,7 @@ class resourceSwitcher {
 
         let hide = () => this.hide();
 
-        $('.select-database-container .box-container a').on('click', function (e) {
+        $('.box-container a', this.$selectDatabaseContainer).on('click', function (e) {
             e.stopPropagation();
             hide();
             let a: HTMLAnchorElement = this as HTMLAnchorElement;
@@ -51,12 +71,12 @@ class resourceSwitcher {
 
     private show() {
         this.$selectDatabaseContainer.addClass('active');
-        ko.postbox.publish('ResourceSwitcher.Show');
+        ko.postbox.publish(EVENTS.ResourceSwitcher.Show);
     }
 
     private hide() {
         this.$selectDatabaseContainer.removeClass('active');
-        ko.postbox.publish('ResourceSwitcher.Hide');
+        ko.postbox.publish(EVENTS.ResourceSwitcher.Hide);
     }
 }
 
