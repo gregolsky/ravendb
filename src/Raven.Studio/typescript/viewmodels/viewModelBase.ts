@@ -141,6 +141,13 @@ class viewModelBase {
         window.addEventListener("beforeunload", this.beforeUnloadListener, false);
         this.isAttached = true;
         viewModelBase.showSplash(false);
+        this.rightPanelSetup();
+    }
+
+    private rightPanelSetup() {
+        var $pageHostRoot = $("#page-host-root");
+        var hasRightPanel = !!$("#right-options-panel", $pageHostRoot).length;
+        $pageHostRoot.toggleClass("enable-right-options-panel", hasRightPanel);
     }
 
     /*
