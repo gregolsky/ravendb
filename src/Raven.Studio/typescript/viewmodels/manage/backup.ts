@@ -8,6 +8,7 @@ import backupDatabaseCommand = require("commands/maintenance/backupDatabaseComma
 import backupFilesystemCommand = require("commands/filesystem/backupFilesystemCommand");
 import backupCounterStorageCommand = require("commands/counter/backupCounterStorageCommand");
 import getResourceDrives = require("commands/resources/getResourceDrives");
+import accessHelper = require("viewmodels/shell/accessHelper");
 
 class resourceBackup {
     incremental = ko.observable<boolean>(false);
@@ -100,7 +101,7 @@ class backupDatabase extends viewModelBase {
     isForbidden = ko.observable<boolean>();
 
     canActivate(args: any): any {
-        this.isForbidden(!shell.isGlobalAdmin());
+        this.isForbidden(!accessHelper.isGlobalAdmin());
         return true;
     }
 

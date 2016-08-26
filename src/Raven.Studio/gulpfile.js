@@ -1,4 +1,4 @@
-﻿/// <binding BeforeBuild='generate-ts' AfterBuild='compile' ProjectOpened='restore' />
+﻿/// <binding BeforeBuild='generate-ts' AfterBuild='compile-changed:app' ProjectOpened='restore' />
 
 require('./gulp/shim');
 
@@ -66,7 +66,6 @@ gulp.task('generate-typings', function(cb) {
 
 gulp.task('compile:test', ['generate-ts'], function() {
      return gulp.src([PATHS.test.tsSource])
-        .pipe(plugins.changed(PATHS.test.tsOutput, { extension: '.js' }))
         .pipe(plugins.sourcemaps.init())
         .pipe(plugins.typescript(tsCompilerConfig))
         .js
@@ -75,6 +74,15 @@ gulp.task('compile:test', ['generate-ts'], function() {
 });
 
 gulp.task('compile:app', ['generate-ts'], function () {
+    return gulp.src([PATHS.tsSource])
+        .pipe(plugins.sourcemaps.init())
+        .pipe(plugins.typescript(tsCompilerConfig))
+        .js
+        .pipe(plugins.sourcemaps.write("."))
+        .pipe(gulp.dest(PATHS.tsOutput));
+});
+
+gulp.task('compile-changed:app', ['generate-ts'], function() {
     return gulp.src([PATHS.tsSource])
         .pipe(plugins.changed(PATHS.tsOutput, { extension: '.js' }))
         .pipe(plugins.sourcemaps.init())
