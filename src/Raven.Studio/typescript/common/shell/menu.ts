@@ -3,11 +3,9 @@
 import * as EVENTS from "common/constants/events";
 import database = require("models/resources/database");
 import router = require("plugins/router");
-import {
-    generateMenuItems,
-    menuItem,
-    intermediateMenuItem,
-    leafMenuItem } from "common/shell/menuItems";
+import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
+import leafMenuItem = require("common/shell/menu/leafMenuItem");
+import generateMenuItems = require("common/shell/menu/generateMenuItems");
 
 class menu {
 

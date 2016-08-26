@@ -1,89 +1,16 @@
 ﻿
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
-import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer")
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import accessHelper = require("viewModels/shell/accessHelper");
+import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
+import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
+import leafMenuItem = require("common/shell/menu/leafMenuItem");
+import GenerateMenuItemOptions = require("common/shell/menu/generateMenuItemOptions");
 
-interface GenerateMenuItemOptions {
-    activeDatabase: KnockoutObservable<database>;
-    canExposeConfigOverTheWire: KnockoutObservable<boolean>;
-    isGlobalAdmin: KnockoutObservable<boolean>;
-}
+export = generateMenuItems;
 
-export type menuItemType = "separator" | "intermediate" | "leaf";
-
-export interface menuItem {
-    type: menuItemType;
-}
-
-export class separatorMenuItem implements menuItem {
-    title: string;
-    type: menuItemType = "separator";
-
-    constructor(title?: string) {
-        this.title = title;
-    }
-}
-
-export class intermediateMenuItem implements menuItem {
-    title: string;
-    children: menuItem[];
-    css: string;
-    type: menuItemType = "intermediate";
-
-    constructor(title: string, children: menuItem[], css?: string) {
-        this.title = title;
-        this.children = children;
-        this.css = css;
-    }
-}
-
-type dynamicHashType = KnockoutObservable<string> | (() => string);
-
-export class leafMenuItem implements menuItem {
-    title: string;
-    tooltip: string;
-    nav: boolean;
-    route: string | Array<string>;
-    moduleId: string;
-    hash: string;
-    dynamicHash: dynamicHashType;
-    css: string;
-    path: KnockoutComputed<string>;
-    enabled: KnockoutObservable<boolean>;
-    type: menuItemType = "leaf";
-
-    constructor({ title, tooltip, route, moduleId, nav, hash, css, dynamicHash, enabled }: {
-        title: string,
-        route: string | Array<string>,
-        moduleId: string,
-        nav: boolean,
-        tooltip?: string,
-        hash?: string,
-        dynamicHash?: dynamicHashType,
-        css?: string,
-        enabled?: KnockoutObservable<boolean>
-    }) {
-        this.title = title;
-        this.route = route;
-        this.moduleId = moduleId;
-        this.nav = nav;
-        this.hash = hash;
-        this.dynamicHash = dynamicHash;
-        this.css = css;
-        this.enabled = enabled;
-        this.path = ko.computed(() => {
-            if (this.hash) {
-                return this.hash;
-            } else if (this.dynamicHash) {
-                return this.dynamicHash();
-            }
-
-            return null;
-        });
-    }
-}
-
-export function generateMenuItems(opts: GenerateMenuItemOptions) {
+function generateMenuItems(opts: GenerateMenuItemOptions) {
     let appUrls = appUrl.forCurrentDatabase();
     let menuItems: menuItem[] = [
         getDocumentsMenuItem(appUrls),
@@ -111,7 +38,7 @@ export function generateMenuItems(opts: GenerateMenuItemOptions) {
 }
 
 function getManageServerMenuItem(appUrls: computedAppUrls,
-    { canExposeConfigOverTheWire, isGlobalAdmin, activeDatabase }: GenerateMenuItemOptions) {
+    { activeDatabase }: GenerateMenuItemOptions) {
     let canReadOrWrite = settingsAccessAuthorizer.canReadOrWrite;
     var items: menuItem[] = [
         new intermediateMenuItem("Global config", [
@@ -194,7 +121,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             title: "Server Smuggling",
             nav: true,
             dynamicHash: appUrl.forServerSmugging,
-            enabled: isGlobalAdmin
+            enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
             route: 'backup',
@@ -202,7 +129,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             title: 'Backup',
             nav: true,
             dynamicHash: appUrl.forBackup,
-            enabled: isGlobalAdmin
+            enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
             route: 'compact',
@@ -210,7 +137,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             title: 'Compact',
             nav: true,
             dynamicHash: appUrl.forCompact,
-            enabled: isGlobalAdmin
+            enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
             route: 'restore',
@@ -218,7 +145,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             title: 'Restore',
             nav: true,
             dynamicHash: appUrl.forRestore,
-            enabled: isGlobalAdmin
+            enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
             route: 'adminLogs',
@@ -226,7 +153,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             title: 'Admin Logs',
             nav: true,
             dynamicHash: appUrl.forAdminLogs,
-            enabled: isGlobalAdmin
+            enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
             route: 'topology',
@@ -234,7 +161,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             title: 'Server Topology',
             nav: true,
             dynamicHash: appUrl.forServerTopology,
-            enabled: isGlobalAdmin
+            enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
             route: 'trafficWatch',
@@ -242,7 +169,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             title: 'Traffic Watch',
             nav: true,
             dynamicHash: appUrl.forTrafficWatch,
-            enabled: isGlobalAdmin
+            enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
             route: 'licenseInformation',
@@ -258,7 +185,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             title: 'Gather Debug Info',
             nav: true,
             dynamicHash: appUrl.forDebugInfo,
-            enabled: isGlobalAdmin
+            enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
             route: 'ioTest',
@@ -266,7 +193,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             title: 'IO Test',
             nav: true,
             dynamicHash: appUrl.forIoTest,
-            enabled: isGlobalAdmin
+            enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
             route: 'diskIoViewer',
@@ -282,7 +209,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             title: "Administrator JS Console",
             nav: true,
             dynamicHash: appUrl.forAdminJsConsole,
-            enabled: isGlobalAdmin
+            enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
             route: 'studioConfig',
@@ -298,7 +225,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             title: 'Hot Spare',
             nav: true,
             dynamicHash: appUrl.forHotSpare,
-            enabled: isGlobalAdmin
+            enabled: accessHelper.isGlobalAdmin
         })
     ];
 
