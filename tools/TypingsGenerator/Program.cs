@@ -50,7 +50,6 @@ namespace TypingsGenerator
             scripter.UsingTypeFilter(type => ignoredTypes.Contains(type) == false);
 
             scripter.AddType(typeof(DatabaseStatistics));
-            scripter.AddType(typeof(QueryResult));
 
             return scripter;
         }

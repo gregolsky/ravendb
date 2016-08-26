@@ -29,8 +29,6 @@ class resourceBackup {
         return resourceDrives.indexOf(location) !== -1;
     }); 
 
-    has40Features = ko.computed(() => shell.has40Features());
-
     constructor(private type: TenantType, private resources: KnockoutObservableArray<resource>) {
         this.resourcesNames = ko.computed(() => resources().map((rs: resource) => rs.name));
 

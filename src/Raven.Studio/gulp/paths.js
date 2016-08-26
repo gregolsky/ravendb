@@ -22,6 +22,7 @@ var paths = {
 
     lessSource: [
         './wwwroot/Content/css/styles.less',
+        './wwwroot/Content/css/legacy_styles.less',
         './wwwroot/Content/css/bootstrap/bootstrap.less'],
     lessTarget: './wwwroot/Content/',
     lessTargetSelector: './wwwroot/Content/**/*.css',
