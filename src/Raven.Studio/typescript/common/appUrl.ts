@@ -234,10 +234,6 @@ class appUrl {
         return "#admin/settings/cluster";
     }
 
-    static forWindowsAuth(): string {
-        return "#admin/settings/windowsAuth";
-    }
-
     static forGlobalConfig(): string {
         return '#admin/settings/globalConfig';
     }

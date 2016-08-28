@@ -43,7 +43,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
     var items: menuItem[] = [
         new intermediateMenuItem("Global config", [
             new leafMenuItem({
-                route: "globalConfig",
+                route: "admin/settings/globalConfig",
                 moduleId: "viewmodels/manage/globalConfig/globalConfigPeriodicExport",
                 title: "Periodic export",
                 tooltip: "",
@@ -51,7 +51,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
                 dynamicHash: appUrl.forGlobalConfigPeriodicExport
             }),
             new leafMenuItem({
-                route: "globalConfigDatabaseSettings",
+                route: "admin/settings/globalConfigDatabaseSettings",
                 moduleId: "viewmodels/manage/globalConfig/globalConfigDatabaseSettings",
                 title: "Cluster-wide database settings",
                 tooltip: "Global cluster-wide database settings",
@@ -59,7 +59,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
                 dynamicHash: appUrl.forGlobalConfigDatabaseSettings
             }),
             new leafMenuItem({
-                route: "globalConfigReplication",
+                route: "admin/settings/globalConfigReplication",
                 moduleId: "viewmodels/manage/globalConfig/globalConfigReplications",
                 title: "Replication",
                 tooltip: "Global replication settings",
@@ -67,7 +67,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
                 dynamicHash: appUrl.forGlobalConfigReplication
             }),
             new leafMenuItem({
-                route: "globalConfigSqlReplication",
+                route: "admin/settings/globalConfigSqlReplication",
                 moduleId: "viewmodels/manage/globalConfig/globalConfigSqlReplication",
                 title: "SQL Replication",
                 tooltip: "Global SQL replication settings",
@@ -75,7 +75,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
                 dynamicHash: appUrl.forGlobalConfigSqlReplication
             }),
             new leafMenuItem({
-                route: "globalConfigQuotas",
+                route: "admin/settings/globalConfigQuotas",
                 moduleId: "viewmodels/manage/globalConfig/globalConfigQuotas",
                 title: "Quotas",
                 tooltip: "Global quotas settings",
@@ -83,7 +83,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
                 dynamicHash: appUrl.forGlobalConfigQuotas
             }),
             new leafMenuItem({
-                route: "globalConfigCustomFunctions",
+                route: "admin/settings/globalConfigCustomFunctions",
                 moduleId: "viewmodels/manage/globalConfig/globalConfigCustomFunctions",
                 title: "Custom functions",
                 tooltip: "Global custom functions settings",
@@ -91,7 +91,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
                 dynamicHash: appUrl.forGlobalConfigCustomFunctions
             }),
             new leafMenuItem({
-                route: "globalConfigVersioning",
+                route: "admin/settings/globalConfigVersioning",
                 moduleId: "viewmodels/manage/globalConfig/globalConfigVersioning",
                 title: "Versioning",
                 tooltip: "Global versioning settings",
@@ -100,7 +100,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             })     
         ]),
         new leafMenuItem({
-            route: ['', 'apiKeys'],
+            route: ['admin/settings', 'admin/settings/apiKeys'],
             moduleId: 'viewmodels/manage/apiKeys',
             title: 'API Keys',
             nav: true,
@@ -108,7 +108,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             enabled: canReadOrWrite
         }),
         new leafMenuItem({
-            route: 'cluster',
+            route: 'admin/settings/cluster',
             moduleId: "viewmodels/manage/cluster",
             title: "Cluster",
             nav: true,
@@ -116,7 +116,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             enabled: canReadOrWrite
         }),
         new leafMenuItem({
-            route: "serverSmuggling",
+            route: "admin/settings/serverSmuggling",
             moduleId: "viewmodels/manage/serverSmuggling",
             title: "Server Smuggling",
             nav: true,
@@ -124,7 +124,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
-            route: 'backup',
+            route: 'admin/settings/backup',
             moduleId: 'viewmodels/manage/backup',
             title: 'Backup',
             nav: true,
@@ -132,7 +132,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
-            route: 'compact',
+            route: 'admin/settings/compact',
             moduleId: 'viewmodels/manage/compact',
             title: 'Compact',
             nav: true,
@@ -140,7 +140,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
-            route: 'restore',
+            route: 'admin/settings/restore',
             moduleId: 'viewmodels/manage/restore',
             title: 'Restore',
             nav: true,
@@ -148,7 +148,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
-            route: 'adminLogs',
+            route: 'admin/settings/adminLogs',
             moduleId: 'viewmodels/manage/adminLogs',
             title: 'Admin Logs',
             nav: true,
@@ -156,7 +156,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
-            route: 'topology',
+            route: 'admin/settings/topology',
             moduleId: 'viewmodels/manage/topology',
             title: 'Server Topology',
             nav: true,
@@ -164,7 +164,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
-            route: 'trafficWatch',
+            route: 'admin/settings/trafficWatch',
             moduleId: 'viewmodels/manage/trafficWatch',
             title: 'Traffic Watch',
             nav: true,
@@ -172,7 +172,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
-            route: 'licenseInformation',
+            route: 'admin/settings/licenseInformation',
             moduleId: 'viewmodels/manage/licenseInformation',
             title: 'License Information',
             nav: true,
@@ -180,7 +180,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             enabled: canReadOrWrite
         }),
         new leafMenuItem({
-            route: 'debugInfo',
+            route: 'admin/settings/debugInfo',
             moduleId: 'viewmodels/manage/infoPackage',
             title: 'Gather Debug Info',
             nav: true,
@@ -188,7 +188,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
-            route: 'ioTest',
+            route: 'admin/settings/ioTest',
             moduleId: 'viewmodels/manage/ioTest',
             title: 'IO Test',
             nav: true,
@@ -196,7 +196,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
-            route: 'diskIoViewer',
+            route: 'admin/settings/diskIoViewer',
             moduleId: 'viewmodels/manage/diskIoViewer',
             title: 'Disk IO Viewer',
             nav: true,
@@ -204,7 +204,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             enabled: canReadOrWrite
         }),
         new leafMenuItem({
-            route: 'console',
+            route: 'admin/settings/console',
             moduleId: "viewmodels/manage/console",
             title: "Administrator JS Console",
             nav: true,
@@ -212,7 +212,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
-            route: 'studioConfig',
+            route: 'admin/settings/studioConfig',
             moduleId: 'viewmodels/manage/studioConfig',
             title: 'Studio Config',
             nav: true,
@@ -220,7 +220,7 @@ function getManageServerMenuItem(appUrls: computedAppUrls,
             enabled: canReadOrWrite
         }),
         new leafMenuItem({
-            route: 'hotSpare',
+            route: 'admin/settings/hotSpare',
             moduleId: 'viewmodels/manage/hotSpare',
             title: 'Hot Spare',
             nav: true,
