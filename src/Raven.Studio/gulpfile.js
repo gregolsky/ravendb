@@ -10,6 +10,7 @@ var gulp = require('gulp'),
     runSequence = require('run-sequence'),
     exec = require('child_process').exec,
     parseHandlers = require('./gulp/parseHandlers'),
+    parseConfiguration = require('./gulp/parseConfiguration'),
     findNewestFile = require('./gulp/findNewestFile'),
     checkAllFilesExist = require('./gulp/checkAllFilesExist'),
     gutil = require('gulp-util');
@@ -31,7 +32,13 @@ gulp.task('clean', function () {
 gulp.task('parse-handlers', function() {
     return gulp.src(PATHS.handlersToParse)
         .pipe(parseHandlers('endpoints.ts'))
-        .pipe(gulp.dest(PATHS.handlersConstantsTargetDir));
+        .pipe(gulp.dest(PATHS.constantsTargetDir));
+});
+
+gulp.task('parse-configuration', function() {
+    return gulp.src(PATHS.configurationFilesToParse)
+        .pipe(parseConfiguration('configuration.ts'))
+        .pipe(gulp.dest(PATHS.constantsTargetDir));
 });
 
 gulp.task('less:old', function () {
@@ -210,7 +217,7 @@ gulp.task('watch', ['compile'], function () {
     gulp.watch(PATHS.lessSource, ['less']);
 });
 
-gulp.task('generate-ts', ['parse-handlers', 'generate-typings'], function() {});
+gulp.task('generate-ts', ['parse-handlers', 'parse-configuration', 'generate-typings'], function() {});
 
 gulp.task('restore', ['bower', 'typings']);
 

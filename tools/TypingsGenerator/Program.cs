@@ -8,6 +8,7 @@ using Raven.Client.Connection;
 using Raven.Client.Data;
 using System.Reflection;
 using Raven.Client.Data.Queries;
+using Raven.Client.Indexing;
 using Raven.Json.Linq;
 using Raven.Server.Documents;
 using TypeScripter;
@@ -48,8 +49,9 @@ namespace TypingsGenerator
 
 
             scripter.UsingTypeFilter(type => ignoredTypes.Contains(type) == false);
-
+            scripter.UsingTypeReader(new TypeReaderWithIgnoreMethods());
             scripter.AddType(typeof(DatabaseStatistics));
+            scripter.AddType(typeof(IndexDefinition));
 
             return scripter;
         }
