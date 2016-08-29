@@ -1,6 +1,5 @@
 ﻿
-import * as EVENTS from "common/constants/events"
-
+import EVENTS = require("common/constants/events");
 import resource = require("models/resources/resource");
 /*
     Events emitted through ko.postbox

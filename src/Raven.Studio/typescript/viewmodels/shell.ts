@@ -1,11 +1,14 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
+import EVENTS = require("common/constants/events");
+import resourceActivatedEventArgs = require("viewmodels/resources/resourceActivatedEventArgs");
 import router = require("plugins/router");
 import app = require("durandal/app");
 import sys = require("durandal/system");
 import viewLocator = require("durandal/viewLocator");
 
 import menu = require("common/shell/menu");
+import activeResourceTracker = require("viewmodels/resources/activeResourceTracker");
 import resourceSwitcher = require("common/shell/resourceSwitcher");
 import searchBox = require("common/shell/searchBox");
 import resource = require("models/resources/resource");
@@ -36,18 +39,13 @@ import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
 import apiKeyLocalStorage = require("common/apiKeyLocalStorage");
 import extensions = require("common/extensions");
-import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
-import getLatestServerBuildVersionCommand = require("commands/database/studio/getLatestServerBuildVersionCommand");
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
 import getSupportCoverageCommand = require("commands/auth/getSupportCoverageCommand");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
-import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
@@ -64,7 +62,6 @@ import accessHelper = require("viewmodels/shell/accessHelper");
 import licensingStatus = require("viewmodels/common/licensingStatus");
 import recentErrors = require("viewmodels/common/recentErrors");
 import enterApiKey = require("viewmodels/common/enterApiKey");
-import latestBuildReminder = require("viewmodels/common/latestBuildReminder");
 import recentQueriesStorage = require("common/recentQueriesStorage");
 import getHotSpareInformation = require("commands/licensing/GetHotSpareInformation");
 
@@ -73,6 +70,7 @@ class shell extends viewModelBase {
     static studioConfigDocumentId = "Raven/StudioConfig";
     static selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8"));
     static originalEnvironmentColor = ko.observable<environmentColor>(shell.selectedEnvironmentColorStatic());
+    private activeResource: KnockoutObservable<resource> = activeResourceTracker.default.resource;
     selectedColor = shell.selectedEnvironmentColorStatic;
     selectedEnvironmentText = ko.computed(() => this.selectedColor().name + " Environment");
     canShowEnvironmentText = ko.computed(() => this.selectedColor().name !== "Default");
@@ -80,7 +78,8 @@ class shell extends viewModelBase {
     renewOAuthTokenTimeoutId: number;
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption()); //TODO:
     showLogOutButton: KnockoutComputed<boolean>; //TODO:
-    isLoadingStatistics = ko.computed(() => !!this.lastActivatedResource() && !this.lastActivatedResource().statistics()).extend({ throttle: 100 });
+    
+    isLoadingStatistics = ko.computed(() => !!this.activeResource() && !this.activeResource().statistics()).extend({ throttle: 100 });
 
     static databases = ko.observableArray<database>();
     databasesLoadedTask: JQueryPromise<any>;
@@ -117,11 +116,7 @@ class shell extends viewModelBase {
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
 
-    mainMenu = new menu({
-        canExposeConfigOverTheWire: accessHelper.canExposeConfigOverTheWire,
-        isGlobalAdmin: accessHelper.isGlobalAdmin,
-        activeDatabase: this.activeDatabase
-    });
+    mainMenu = new menu();
     searchBox = new searchBox();
     resourceSwitcher = new resourceSwitcher(shell.resources);
 
@@ -150,10 +145,21 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
         ko.postbox.subscribe("SelectNone", () => this.selectNone());
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => this.activateDatabase(db));
-        ko.postbox.subscribe("ActivateFilesystem", (fs: fileSystem) => this.activateFileSystem(fs));
-        ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => this.activateCounterStorage(cs));
-        ko.postbox.subscribe("ActivateTimeSeries", (ts: timeSeries) => this.activateTimeSeries(ts));
+
+        ko.postbox.subscribe(EVENTS.Resource.Activate, ({ type, resource }: resourceActivatedEventArgs) => {
+           if (type === TenantType.Database) {
+               return this.activateDatabase(resource as database);
+           } else if (type === TenantType.FileSystem) {
+               return this.activateFileSystem(resource as fileSystem);
+           } else if (type === TenantType.CounterStorage) {
+               return this.activateCounterStorage(resource as counterStorage);
+           } else if (type === TenantType.TimeSeries) {
+               return this.activateTimeSeries(resource as timeSeries);
+            }
+
+            throw new Error(`Invalid resource type ${ type }`);
+        });
+
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
         ko.postbox.subscribe("ChangesApiReconnected", (rs: resource) => this.reloadDataAfterReconnection(rs));
 
@@ -197,7 +203,7 @@ class shell extends viewModelBase {
             }
         });
 
-        $(window).resize(() => self.lastActivatedResource.valueHasMutated());
+        $(window).resize(() => self.activeResource.valueHasMutated());
         //TODO: return shell.fetchLicenseStatus();
 
     }
@@ -455,10 +461,15 @@ class shell extends viewModelBase {
             changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchDbStats(db)),
             changesContext.currentResourceChangesApi().watchBulks(() => this.fetchDbStats(db))
         ];
-        var isNotADatabase = this.currentConnectedResource instanceof database === false;
+        var isNotADatabase = this.isPreviousDifferentKind(TenantType.Database);
         this.updateChangesApi(db, isNotADatabase, () => this.fetchDbStats(db), changeSubscriptionArray);
 
-        shell.resources().forEach((r: resource) => r.isSelected(r instanceof database && r.name === db.name));
+        this.setSelectedResourceInCollection(db);
+    }
+
+    private isPreviousDifferentKind(currentType: TenantType) {
+        return !this.currentConnectedResource ||
+            this.currentConnectedResource.type !== currentType;
     }
 
     private fetchDbStats(db: database) {
@@ -480,10 +491,10 @@ class shell extends viewModelBase {
         var changesSubscriptionArray = () => [
             changesContext.currentResourceChangesApi().watchFsFolders("", () => this.fetchFsStats(fs))
         ];
-        var isNotAFileSystem = this.currentConnectedResource instanceof fileSystem === false;
+        var isNotAFileSystem = this.isPreviousDifferentKind(TenantType.FileSystem);
         this.updateChangesApi(fs, isNotAFileSystem, () => this.fetchFsStats(fs), changesSubscriptionArray);
 
-        shell.resources().forEach((r: resource) => r.isSelected(r instanceof fileSystem && r.name === fs.name));
+        this.setSelectedResourceInCollection(fs);
     }
 
     private fetchFsStats(fs: fileSystem) {
@@ -497,7 +508,7 @@ class shell extends viewModelBase {
 
     private disconnectFromCurrentResource() {
         shell.disconnectFromResourceChangesApi();
-        this.lastActivatedResource(null);
+        activeResourceTracker.default.resource(null);
         this.currentConnectedResource = null; //TODO
     }
 
@@ -506,10 +517,9 @@ class shell extends viewModelBase {
             changesContext.currentResourceChangesApi().watchAllCounters(() => this.fetchCsStats(cs)),
             changesContext.currentResourceChangesApi().watchCounterBulkOperation(() => this.fetchCsStats(cs))
         ];
-        var isNotACounterStorage = this.currentConnectedResource instanceof counterStorage === false;
+        var isNotACounterStorage = this.isPreviousDifferentKind(TenantType.CounterStorage);
         this.updateChangesApi(cs, isNotACounterStorage, () => this.fetchCsStats(cs), changesSubscriptionArray);
-
-        shell.resources().forEach((r: resource) => r.isSelected(r instanceof counterStorage && r.name === cs.name));
+        this.setSelectedResourceInCollection(cs);
     }
 
     private fetchCsStats(cs: counterStorage) {
@@ -525,10 +535,16 @@ class shell extends viewModelBase {
             changesContext.currentResourceChangesApi().watchAllTimeSeries(() => this.fetchTsStats(ts)),
             changesContext.currentResourceChangesApi().watchTimeSeriesBulkOperation(() => this.fetchTsStats(ts))
         ];
-        var isNotATimeSeries = this.currentConnectedResource instanceof timeSeries === false;
+        var isNotATimeSeries = this.isPreviousDifferentKind(TenantType.TimeSeries);
         this.updateChangesApi(ts, isNotATimeSeries, () => this.fetchTsStats(ts), changesSubscriptionArray);
 
-        shell.resources().forEach((r: resource) => r.isSelected(r instanceof timeSeries && r.name === ts.name));
+        this.setSelectedResourceInCollection(ts);
+    }
+
+    private setSelectedResourceInCollection(toSelect: resource) {
+        shell.resources()
+            .forEach((r: resource) =>
+                r.isSelected(r.type === toSelect.type && r.name === toSelect.name));
     }
 
     private fetchTsStats(ts: timeSeries) {
@@ -662,26 +678,22 @@ class shell extends viewModelBase {
             .done(() => {
                 var connectedResource = this.currentConnectedResource;
                 var resourceObservableArray: any = shell.databases;
-                var activeResourceObservable: any = this.activeDatabase;
                 var isNotDatabase = !(connectedResource instanceof database);
                 if (isNotDatabase && connectedResource instanceof fileSystem) {
                     resourceObservableArray = shell.fileSystems;
-                    activeResourceObservable = this.activeFilesystem;
                 }
                 else if (isNotDatabase && connectedResource instanceof counterStorage) {
                     resourceObservableArray = shell.counterStorages;
-                    activeResourceObservable = this.activeCounterStorage;
                 }
                 else if (isNotDatabase && connectedResource instanceof timeSeries) {
                     resourceObservableArray = shell.timeSeries;
-                    activeResourceObservable = this.activeTimeSeries;
                 }
-                this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
+                this.selectNewActiveResourceIfNeeded(resourceObservableArray);
             });
     }
 
-    private selectNewActiveResourceIfNeeded(resourceObservableArray: KnockoutObservableArray<any>, activeResourceObservable: any) {
-        var activeResource = activeResourceObservable();
+    private selectNewActiveResourceIfNeeded(resourceObservableArray: KnockoutObservableArray<any>) {
+        var activeResource = this.activeResource();
         var actualResourceObservableArray = resourceObservableArray();
 
         if (!!activeResource && actualResourceObservableArray.contains(activeResource) === false) {
@@ -689,8 +701,7 @@ class shell extends viewModelBase {
                 resourceObservableArray().first().activate();
             } else { //if (actualResourceObservableArray.length == 0)
                 shell.disconnectFromResourceChangesApi();
-                activeResourceObservable(null);
-                this.lastActivatedResource(null);
+                this.activeResource(null);
             }
 
             this.navigate(appUrl.forResources());
@@ -1020,7 +1031,11 @@ class shell extends viewModelBase {
             this.databasesLoadedTask.done(() => {
                 var matchingDatabase = shell.databases().first(db => db.name == databaseName);
                 if (matchingDatabase && this.activeDatabase() !== matchingDatabase) {
-                    ko.postbox.publish("ActivateDatabase", matchingDatabase);
+                    ko.postbox.publish(EVENTS.Resource.Activate,
+                    {
+                        resource: matchingDatabase,
+                        type: TenantType.Database
+                    });
                 }
             });
         }

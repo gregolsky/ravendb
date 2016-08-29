@@ -1,7 +1,6 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
-import * as EVENTS from "common/constants/events";
-import database = require("models/resources/database");
+import EVENTS = require("common/constants/events");
 import router = require("plugins/router");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
@@ -44,12 +43,8 @@ class menu {
         };
     }
 
-    constructor(opts: {
-        activeDatabase: KnockoutObservable<database>,
-        canExposeConfigOverTheWire: KnockoutObservable<boolean>,
-        isGlobalAdmin: KnockoutObservable<boolean>
-    }) {
-        this.items = generateMenuItems(opts);
+    constructor() {
+        this.items = generateMenuItems();
         this.itemsIndex = ko.computed(() => this.calculateMenuItemsIndex());
     }
 

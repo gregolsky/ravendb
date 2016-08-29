@@ -65,7 +65,7 @@
                 </div>
                 <div class="resource-switcher-container" data-bind="with: resourceSwitcher">
                     <div class="form-control btn-toggle resource-switcher">
-                        <span class="database" data-bind="text: $root.lastActivatedResource() ? $root.lastActivatedResource().name:''"></span>
+                        <span class="database" data-bind="text: $root.activeResource() ? $root.activeResource().name:''"></span>
                     </div>
                     <div class="box-container">
                         <div class="database-filter-container">

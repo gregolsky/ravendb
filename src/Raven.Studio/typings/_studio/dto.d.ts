@@ -17,3 +17,4 @@ interface menuItem {
 }
 
 type dynamicHashType = KnockoutObservable<string> | (() => string);
+
