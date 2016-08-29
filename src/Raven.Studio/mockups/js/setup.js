@@ -2,7 +2,7 @@
 
 (function (window) {
     var $mainMenu = $('#main-menu');
-    var $selectDatabaseContainer = $('.select-database-container');
+    var $selectDatabaseContainer = $('.resource-switcher-container');
     var $searchContainer = $('.search-container');
 
     $selectDatabaseContainer.removeClass('active');
@@ -46,14 +46,14 @@
 
     (function setupResourceSwitcher() {
 
-        var $filter = $('.select-database-container .database-filter');
+        var $filter = $('.resource-switcher-container .database-filter');
 
         $selectDatabaseContainer.click(function (e) {
             e.stopPropagation();
             show();
         });
 
-        $('.form-control.btn-toggle.select-database').click(function (e) {
+        $('.form-control.btn-toggle.resource-switcher').click(function (e) {
             if ($(this).is('.active')) {
                 hide();
             } else {
@@ -63,7 +63,7 @@
             e.stopPropagation();
         });
 
-        $('.select-database-container .box-container a').on('click', function (e) {
+        $('.resource-switcher-container .box-container a').on('click', function (e) {
             e.stopPropagation();
             hide();
         });

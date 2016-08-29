@@ -107,8 +107,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="select-database-container active">
-                        <div class="form-control btn-toggle select-database">
+                    <div class="resource-switcher-container active">
+                        <div class="form-control btn-toggle resource-switcher">
                             <span class="database">db/IdentityTryOuts</span>
                         </div>
                         <div class="box-container">
@@ -351,12 +351,16 @@
             <div id="right-options-panel" class="flex-window">
                 <div class="panel flex-window-head">
                     <div class="panel-body">
-                        <h4>Properties</h4>
-                        <p class="small">
-                            <strong>Etag:</strong> 00000000000100-0101c-1001-0000000000000003<br />
-                            <strong>Last-Modified:</strong> 09/08/2016 08:30 (UTC)<br />
-                            <strong>Size:</strong> 0.52.KB
-                        </p>
+                        <h3 class="margin-none">Properties</h3>
+                        <hr class="small" />
+                        <dl class="dl-horizontal small">
+                            <dt>Etag:</dt>
+                            <dd>452345346345656</dd>
+                            <dt>Modified:</dt>
+                            <dd> 09/08/2016 08:30 (UTC)</dd>
+                            <dt>Size:</dt>
+                            <dd>0.52.KB</dd>
+                        </dl>
                     </div>
                 </div>
                 <div class="panel flex-window-scroll flex-window margin-none">
@@ -387,47 +391,49 @@
                                 </button>
                             </div>
                         </div>
-                        <input type="search" class="form-control" placeholder="search" />
+                        <div class="search-documents">
+                            <input type="search" class="form-control" placeholder="search" /><span class="icon-search"></span>
+                        </div>
                     </div>
                     <div class="flex-window-scroll">
                         <div class="panel-body">
                             <ul class="objects-list">
-                                <li><a href="#" class="database">brickpile</a></li>
-                                <li><a href="#" class="database">brics</a></li>
-                                <li><a href="#" class="database">fs</a></li>
-                                <li><a href="#" class="database">IdentityTests</a></li>
-                                <li><a href="#" class="database">IdentityTryOuts</a></li>
-                                <li><a href="#" class="filesystem">jspatchtest</a></li>
-                                <li><a href="#" class="database">logs</a></li>
-                                <li><a href="#" class="database">Media</a></li>
-                                <li><a href="#" class="database">Northwind</a></li>
-                                <li><a href="#" class="database">QuartzDemo</a></li>
-                                <li><a href="#" class="database">r1</a></li>
-                                <li><a href="#" class="database">rep1</a></li>
-                                <li><a href="#" class="filesystem">rep2</a></li>
-                                <li><a href="#" class="filesystem">sortings</a></li>
-                                <li><a href="#" class="database">T1</a></li>
-                                <li><a href="#" class="database">test</a></li>
-                                <li><a href="#" class="counter">test2</a></li>
-                                <li><a href="#" class="timeseries">ThisIsTest</a></li>
-                                <li><a href="#" class="database">brickpile</a></li>
-                                <li><a href="#" class="database">brics</a></li>
-                                <li><a href="#" class="database">fs</a></li>
-                                <li><a href="#" class="database">IdentityTests</a></li>
-                                <li><a href="#" class="database">IdentityTryOuts</a></li>
-                                <li><a href="#" class="filesystem">jspatchtest</a></li>
-                                <li><a href="#" class="database">logs</a></li>
-                                <li><a href="#" class="database">Media</a></li>
-                                <li><a href="#" class="database">Northwind</a></li>
-                                <li><a href="#" class="database">QuartzDemo</a></li>
-                                <li><a href="#" class="database">r1</a></li>
-                                <li><a href="#" class="database">rep1</a></li>
-                                <li><a href="#" class="filesystem">rep2</a></li>
-                                <li><a href="#" class="filesystem">sortings</a></li>
-                                <li><a href="#" class="database">T1</a></li>
-                                <li><a href="#" class="database">test</a></li>
-                                <li><a href="#" class="counter">test2</a></li>
-                                <li><a href="#" class="timeseries">ThisIsTest</a></li>
+                                <li><a href="#" class="document">brickpile</a></li>
+                                <li><a href="#" class="document">brics</a></li>
+                                <li><a href="#" class="document">fs</a></li>
+                                <li><a href="#" class="document">IdentityTests</a></li>
+                                <li><a href="#" class="document">IdentityTryOuts</a></li>
+                                <li><a href="#" class="document">jspatchtest</a></li>
+                                <li><a href="#" class="document">logs</a></li>
+                                <li><a href="#" class="document">Media</a></li>
+                                <li><a href="#" class="document">Northwind</a></li>
+                                <li><a href="#" class="document">QuartzDemo</a></li>
+                                <li><a href="#" class="document">r1</a></li>
+                                <li><a href="#" class="document">rep1</a></li>
+                                <li><a href="#" class="document">rep2</a></li>
+                                <li><a href="#" class="document">sortings</a></li>
+                                <li><a href="#" class="document">T1</a></li>
+                                <li><a href="#" class="document">test</a></li>
+                                <li><a href="#" class="document">test2</a></li>
+                                <li><a href="#" class="document">ThisIsTest</a></li>
+                                <li><a href="#" class="document">brickpile</a></li>
+                                <li><a href="#" class="document">brics</a></li>
+                                <li><a href="#" class="document">fs</a></li>
+                                <li><a href="#" class="document">IdentityTests</a></li>
+                                <li><a href="#" class="document">IdentityTryOuts</a></li>
+                                <li><a href="#" class="document">jspatchtest</a></li>
+                                <li><a href="#" class="document">logs</a></li>
+                                <li><a href="#" class="document">Media</a></li>
+                                <li><a href="#" class="document">Northwind</a></li>
+                                <li><a href="#" class="document">QuartzDemo</a></li>
+                                <li><a href="#" class="document">r1</a></li>
+                                <li><a href="#" class="document">rep1</a></li>
+                                <li><a href="#" class="document">rep2</a></li>
+                                <li><a href="#" class="document">sortings</a></li>
+                                <li><a href="#" class="document">T1</a></li>
+                                <li><a href="#" class="document">test</a></li>
+                                <li><a href="#" class="document">test2</a></li>
+                                <li><a href="#" class="document">ThisIsTest</a></li>
                             </ul>
                         </div>
                     </div>
@@ -437,14 +443,14 @@
             <div class="flex-window">
                 <div class="flex-winddow-head">
                     <div class="clearfix">
-                        <h2 class="pull-left-sm"><span class="icon-star"></span> <span class="icon-star-filled favorite"></span> Orders/123123123 <small></h2>
-                        <div class="pull-right-sm"><span class="icon-warning text-warning"></span> Document has beend modified outside of studio 1 minute ago. <a href="#">click here to refresh</a></small></div>
+                        <h2 class="pull-left-sm"><a class="reset-color"><span class="icon-star"></span> <span class="icon-star-filled favorite"></a></span> Orders/123123123 <input type="text" class="edit-inline" value="123123123" />  <a class="icon-edit reset-color"></a></h2>
+                        <div class="pull-right-sm"><small><span class="icon-warning text-warning"></span> Document has beend modified outside of studio 1 minute ago. <a href="#">click here to refresh</a></small></div>
                     </div>
                     <div class="btn-bar">
                         <div class="pull-left-sm">
                             <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-success"><span class="icon-save"></span> Save</button>
-                                <button type="button" class="btn btn-sm btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <button type="button" class="btn btn-success"><span class="icon-save"></span> Save</button>
+                                <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                     <span class="caret"></span>
                                     <span class="sr-only">Toggle Dropdown</span>
                                 </button>
@@ -453,12 +459,12 @@
                                     <li><a href="#">Save as...</a></li>
                                 </ul>
                             </div>
-                            <button type="button" class="btn btn-sm btn-danger"><span class="icon-trash"></span> Delete</button>
+                            <button type="button" class="btn btn-danger"><span class="icon-trash"></span> Delete</button>
                         </div>
                         <div class="pull-right-sm">
                             <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-default"><span class="icon-copy"></span> Copy</button>
-                                <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <button type="button" class="btn btn-default"><span class="icon-copy"></span> Copy</button>
+                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                     <span class="caret"></span>
                                     <span class="sr-only">Toggle Dropdown</span>
                                 </button>
@@ -469,9 +475,9 @@
                             </div>
                         </div>
                     </div>
-                    <hr />
+                    <hr class="small" />
                     <div class="clearfix">
-                        <div class="btn-group btn-group-xs pull-right" role="group" aria-label="...">
+                        <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
                             <button type="button" class="btn btn-default"><span class="icon-indent"></span> Format</button>
                             <button type="button" class="btn btn-default"><span class="icon-collapse"></span> Toggle collapse</button>
                             <button type="button" class="btn btn-default"><span class="icon-newline"></span> Toggle new lines</button>

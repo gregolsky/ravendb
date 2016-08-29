@@ -34,9 +34,9 @@ class resourceSwitcher {
     }
 
     initialize() {
-        this.$selectDatabaseContainer = $('.select-database-container');
-        this.$selectDatabase = $('.form-control.btn-toggle.select-database');
-        this.$filter = $('.select-database-container .database-filter');
+        this.$selectDatabaseContainer = $('.resource-switcher-container');
+        this.$selectDatabase = $('.form-control.btn-toggle.resource-switcher');
+        this.$filter = $('.resource-switcher-container .database-filter');
 
         this.$selectDatabaseContainer.on('click', (e) => {
             e.stopPropagation();
