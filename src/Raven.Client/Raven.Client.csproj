@@ -25,22 +25,12 @@
     <Title>RavenDB Client</Title>
   </PropertyGroup>
 
-   <PropertyGroup Condition=" '$(OS)' != 'Unix' ">
-    <NativeDepsPlatform>Windows</NativeDepsPlatform>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(OS)' == 'Unix' And Exists('/Applications') And Exists('/Library') And Exists('/System') ">
-    <NativeDepsPlatform>Mac</NativeDepsPlatform>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(OS)' == 'Unix' And '$(NativeDepsPlatform)' == '' ">
-    <NativeDepsPlatform>Linux</NativeDepsPlatform>
-  </PropertyGroup>
-  
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="RavenDB.Client.targets">
-      <PackagePath>build/netstandard1.3</PackagePath>
+      <PackagePath>build</PackagePath>
       <Pack>true</Pack>
     </Content>
     <Content Include="..\Sparrow\bin\Release\netstandard1.3\Sparrow.dll">
