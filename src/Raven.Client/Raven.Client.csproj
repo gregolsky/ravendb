@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>RavenDB Client is the client library for accessing RavenDB</Description>
-    <Description>RavenDB Client is the client library for accessing RavenDB</Description>
     <Version>4.0.0-custom-40</Version>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>netstandard1.3</TargetFramework>
@@ -24,35 +23,50 @@
     <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
     <Product>RavenDB Client</Product>
     <Title>RavenDB Client</Title>
-    <RuntimeIdentifiers>win7-x64;win8-x64;win81-x64;win10-x64;win7-x86;win8-x86;win81-x86;win10-x86;ubuntu.14.04-x64;ubuntu.16.04-x64</RuntimeIdentifiers>
   </PropertyGroup>
+
+   <PropertyGroup Condition=" '$(OS)' != 'Unix' ">
+    <NativeDepsPlatform>Windows</NativeDepsPlatform>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(OS)' == 'Unix' And Exists('/Applications') And Exists('/Library') And Exists('/System') ">
+    <NativeDepsPlatform>Mac</NativeDepsPlatform>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(OS)' == 'Unix' And '$(NativeDepsPlatform)' == '' ">
+    <NativeDepsPlatform>Linux</NativeDepsPlatform>
+  </PropertyGroup>
+  
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Properties\package.targets">
-      <PackagePath>build/RavenDB.Client.targets</PackagePath>
+    <Content Include="RavenDB.Client.targets">
+      <PackagePath>build/netstandard1.3</PackagePath>
       <Pack>true</Pack>
     </Content>
     <Content Include="..\Sparrow\bin\Release\netstandard1.3\Sparrow.dll">
       <PackagePath>lib/netstandard1.3/</PackagePath>
       <Pack>true</Pack>
     </Content>
-    <Content Include="..\..\libs\libsodium\x64\libsodium.dll" Link="libsodium.dll" >
-      <PackagePath>runtimes/win-x64/native</PackagePath>
+    <Content Include="..\..\libs\libsodium\x64\libsodium.dll" >
+      <PackagePath>runtimes/win/native/libsodium.x64.dll</PackagePath>
+      <Pack>true</Pack>
     </Content>
-    <Content Include="..\..\libs\libsodium\x86\libsodium.dll" Link="libsodium.dll" >
-      <PackagePath>runtimes/win-x86/native</PackagePath>
+    <Content Include="..\..\libs\libsodium\x86\libsodium.dll">
+      <PackagePath>runtimes/win/native/libsodium.x86.dll</PackagePath>
+      <Pack>true</Pack>
     </Content>
-    <Content Include="..\..\libs\libsodium\x64\libsodium.so" Link="libsodium.so" >
-      <PackagePath>runtimes/unix-x64/native</PackagePath>
+    <Content Include="..\..\libs\libsodium\x64\libsodium.so">
+      <PackagePath>runtimes/linux/native/libsodium.x64.so</PackagePath>
+      <Pack>true</Pack>
     </Content>
-    <Content Include="..\..\libs\libsodium\x86\libsodium.so" Link="libsodium.so" >
-      <PackagePath>runtimes/unix-x86/native</PackagePath>
+    <Content Include="..\..\libs\libsodium\x86\libsodium.so">
+      <PackagePath>runtimes/linux/native/libsodium.x86.so</PackagePath>
+      <Pack>true</Pack>
     </Content>
-    <!--<Content Include="..\..\libs\libsodium\x86\libsodium.arm.so" Link="libsodium.so" >
-      <PackagePath>runtimes/unix-arm/</PackagePath>
-    </Content>-->
+    <Content Include="..\..\libs\libsodium\x86\libsodium.arm.so" >
+      <PackagePath>runtimes/linux/native/libsodium.arm.so</PackagePath>
+      <Pack>true</Pack>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" PrivateAssets="All" />
