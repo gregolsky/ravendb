@@ -47,7 +47,7 @@ namespace rvn
                     return;
 
                 Console.WriteLine($"RavenDB server process PID {_pid} exited.");
-                _exitCode = 1;
+                _exitCode = 0xDEAD;
                 Stop();
             }, null, 0, ServerAliveCheckInterval);
             

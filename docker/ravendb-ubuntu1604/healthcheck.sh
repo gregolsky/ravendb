@@ -1,1 +1,1 @@
-pgrep Raven.Server
+pgrep Raven.Server && pgrep rvn

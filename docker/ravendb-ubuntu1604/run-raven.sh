@@ -78,4 +78,11 @@ echo "Starting RavenDB server: ${COMMAND/"$CERT_PASSWORD"/"*******"}"
 
 eval $COMMAND &
 
-./rvn logstream
+$RVN_EXITCODE=1
+
+while [ $RVN_EXITCODE -ne $((0xDEAD)) ]; do
+    ./rvn logstream;
+    RVN_EXITCODE=$?
+    echo "Error running 'rvn logstream'. Retrying in 5 seconds.";
+    sleep 5
+done
