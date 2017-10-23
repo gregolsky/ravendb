@@ -72,6 +72,17 @@ if ($AuthenticationDisabled) {
     $dockerArgs += "UNSECURED_ACCESS_ALLOWED=PublicNetwork"
 }
 
+$scheme = if ([string]::IsNullOrEmpty($CertificatePath)) { "http" } else { "https" }
+$machineName = [System.Environment]::MachineName
+
+if ([string]::IsNullOrEmpty($PublicServerUrl)) {
+    $PublicServerUrl = "$($scheme)://$($machineName):$BindPort"   
+}
+
+if ([string]::IsNullOrEmpty($PublicTcpServerUrl)) {
+    $PublicTcpServerUrl = "tcp://$($machineName):$BindTcpPort"   
+}
+
 if ([string]::IsNullOrEmpty($PublicServerUrl) -eq $False) {
     $dockerArgs += "-e" 
     $dockerArgs += "PUBLIC_SERVER_URL=$PublicServerUrl"
@@ -173,7 +184,6 @@ if ([string]::IsNullOrEmpty($ravenIp)) {
 
 $containerIdShort = $containerId.Substring(0, 10)
 
-$scheme = if ([string]::IsNullOrEmpty($CertificatePath)) { "http" } else { "https" }
 
 write-host -nonewline -fore white "**********************************************"
 write-host -fore red "
@@ -198,9 +208,11 @@ write-host -fore cyan "docker logs $containerIdShort"
 write-host -nonewline "Inspect with:`t`t"
 write-host -fore cyan "docker inspect $containerIdShort"
 write-host ""
-write-host -nonewline "Access RavenDB Studio on "
+write-host "Access RavenDB Studio on: "
+write-host -fore yellow "$PublicServerUrl"
 write-host -fore yellow "$($scheme)://$($ravenIp):$BindPort"
-write-host -nonewline "Listening for TCP connections on: "
-write-host -fore yellow "$($ravenIp):$BindTcpPort"
+write-host "Listening for TCP connections on: "
+write-host -fore yellow "$PublicTcpServerUrl"
+write-host -fore yellow "tcp://$($ravenIp):$BindTcpPort"
 write-host ""
 write-host -fore white "**********************************************"
