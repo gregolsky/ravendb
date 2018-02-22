@@ -19,6 +19,9 @@ RUN cd /opt \
     && rm -rf /var/lib/apt/lists/*
 
 COPY run-raven.sh healthcheck.sh /opt/RavenDB/
+
+RUN chmod a+x /opt/RavenDB/*.sh
+
 COPY settings.json /opt/RavenDB/Server
 
 HEALTHCHECK --start-period=60s CMD /opt/RavenDB/healthcheck.sh
