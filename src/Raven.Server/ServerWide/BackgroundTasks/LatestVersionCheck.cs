@@ -14,6 +14,13 @@ namespace Raven.Server.ServerWide.BackgroundTasks
 {
     public static class LatestVersionCheck
     {
+        public enum Channel
+        {
+            Stable = 1,
+            Patch = 2,
+            Dev = 3
+        }
+
         private const string ApiRavenDbNet = "https://api.ravendb.net";
 
         private static SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
