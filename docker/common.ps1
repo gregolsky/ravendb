@@ -1,6 +1,6 @@
 
 function GetVersionFromArtifactName() {
-    $versionRegex = [regex]'RavenDB-([0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-[0-9-]+)?)-[a-z]+'
+    $versionRegex = [regex]'RavenDB-([0-9]\.[0-9]\.[0-9]+(-[a-zA-Z0-9]+-[0-9-]+)?)-[a-z]+'
     $fname = $(Get-ChildItem $ArtifactsDir `
         | Where-Object { $_.Name -Match $versionRegex } `
         | Sort-Object LastWriteTime -Descending `
