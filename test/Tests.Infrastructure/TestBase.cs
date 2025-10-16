@@ -737,6 +737,28 @@ namespace FastTests
             var testOutcomeAnalyzer = new TestOutcomeAnalyzer(Context);
             var shouldSaveDebugPackage = testOutcomeAnalyzer.ShouldSaveDebugPackage();
 
+            if (testOutcomeAnalyzer.Failed)
+            {
+                try
+                {
+                    var others = RunningTestsTracker.GetRunningExcept(Context.UniqueTestName);
+                    Output.WriteLine($"[Diagnostics] Other tests running concurrently when '{Context.UniqueTestName}' failed (showing up to 50):");
+                    if (others.Length == 0)
+                    {
+                        Output.WriteLine("[Diagnostics] None.");
+                    }
+                    else
+                    {
+                        foreach (var t in others)
+                            Output.WriteLine(" - " + t);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Output.WriteLine($"[Diagnostics] Failed to enumerate running tests: {e}");
+                }
+            }
+
             exceptionAggregator.Execute(() =>
             {
                 if (_globalServer?.ServerStore.Observer?.Suspended == true)

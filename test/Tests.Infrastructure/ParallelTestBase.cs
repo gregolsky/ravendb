@@ -86,6 +86,9 @@ public class ParallelTestBase : LinuxRaceConditionWorkAround, IAsyncLifetime
                     }
                 }
 
+                // Track currently running tests for diagnostics
+                Tests.Infrastructure.Utils.RunningTestsTracker.Add(Context.UniqueTestName);
+
                 return _concurrentTestsSemaphoreTaken.Raise();
             });
     }
@@ -99,6 +102,9 @@ public class ParallelTestBase : LinuxRaceConditionWorkAround, IAsyncLifetime
                 File.AppendAllText(FileName, $"[{SystemTime.UtcNow}] Finished: '{Context.UniqueTestName}'.{Environment.NewLine}");
             }
         }
+
+        // Remove from running tests tracker
+        Tests.Infrastructure.Utils.RunningTestsTracker.Remove(Context.UniqueTestName);
 
         return Task.CompletedTask;
     }
