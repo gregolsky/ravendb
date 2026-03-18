@@ -520,14 +520,43 @@ namespace Raven.Server
                 }
 
                 // same certificate, but now we need to see if we need to auto update it
-                var remainingDays = (currentCertificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
-                if (remainingDays > 30 && forceRenew == false)
-                    return; // nothing to do, the certs are the same and we have enough time
+                var now = Time.GetUtcNow();
+                var shouldRenew = false;
 
-                // we want to setup all the renewals for Saturday so we'll have reduced the amount of cert renewals that are counted against our renewals
-                // but if we have less than 20 days, we'll try anyway
-                if (DateTime.Today.DayOfWeek != DayOfWeek.Saturday && remainingDays > 20 && forceRenew == false)
-                    return;
+                // Try to use ACME Renewal Information (ARI) to determine the optimal renewal time
+                try
+                {
+                    var acmeClient = new LetsEncryptClient(Configuration.Core.AcmeUrl);
+                    var renewalInfo = await acmeClient.GetRenewalInfo(currentCertificate.Certificate);
+                    if (renewalInfo?.SuggestedWindow != null)
+                    {
+                        // ARI suggests a renewal window; renew if we are within or past the suggested window
+                        if (now >= renewalInfo.SuggestedWindow.Start)
+                        {
+                            shouldRenew = true;
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"ACME ARI suggests renewal window starting at {renewalInfo.SuggestedWindow.Start:O}. Current time is past the window start, proceeding with renewal.");
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Failed to query ACME Renewal Information (ARI), falling back to default renewal logic.", e);
+                }
+
+                if (shouldRenew == false)
+                {
+                    // Fallback to the original time-based renewal logic
+                    var remainingDays = (currentCertificate.Certificate.NotAfter - now.ToLocalTime()).TotalDays;
+                    if (remainingDays > 30 && forceRenew == false)
+                        return; // nothing to do, the certs are the same and we have enough time
+
+                    // we want to setup all the renewals for Saturday so we'll have reduced the amount of cert renewals that are counted against our renewals
+                    // but if we have less than 20 days, we'll try anyway
+                    if (DateTime.Today.DayOfWeek != DayOfWeek.Saturday && remainingDays > 20 && forceRenew == false)
+                        return;
+                }
 
                 if (ServerStore.LicenseManager.GetLicenseStatus().Type == LicenseType.Developer && forceRenew == false)
                 {

@@ -421,6 +421,19 @@ namespace Raven.Server.Commercial
                 return response;
             }
 
+            public async Task<RenewalInfoResponse> GetRenewalInfoAsync(Uri renewalInfoBase, string certId, CancellationToken token = default(CancellationToken))
+            {
+                var uri = new Uri(renewalInfoBase.ToString().TrimEnd('/') + "/" + certId, UriKind.RelativeOrAbsolute);
+                try
+                {
+                    return await GetAsync<RenewalInfoResponse>(uri, token).ConfigureAwait(false);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+
             #region Helpers
 
             private async Task<TResult> GetAsync<TResult>(Uri uri, CancellationToken token) where TResult : class
@@ -729,6 +742,9 @@ namespace Raven.Server.Commercial
 
             [JsonProperty("meta")]
             public DirectoryMeta Meta { get; set; }
+
+            [JsonProperty("renewalInfo")]
+            public Uri RenewalInfo { get; set; }
         }
 
         private class DirectoryMeta
@@ -890,6 +906,24 @@ namespace Raven.Server.Commercial
             public byte[] Certificate { get; set; }
         }
 
+        public class RenewalInfoResponse
+        {
+            [JsonProperty("suggestedWindow")]
+            public SuggestedWindow SuggestedWindow { get; set; }
+
+            [JsonProperty("explanationURL")]
+            public string ExplanationUrl { get; set; }
+        }
+
+        public class SuggestedWindow
+        {
+            [JsonProperty("start")]
+            public DateTime Start { get; set; }
+
+            [JsonProperty("end")]
+            public DateTime End { get; set; }
+        }
+
         private class AcmeHeader
         {
             [JsonProperty("nonce")]
@@ -960,6 +994,56 @@ namespace Raven.Server.Commercial
                 s = s.Replace('/', '_'); // 63rd char of encoding
                 return s;
             }
+        }
+
+        public static string ComputeAriCertId(X509Certificate2 certificate)
+        {
+            if (certificate == null)
+                throw new ArgumentNullException(nameof(certificate));
+
+            // Extract Authority Key Identifier (AKI) extension (OID 2.5.29.35)
+            var akiExtension = certificate.Extensions["2.5.29.35"];
+            if (akiExtension == null)
+                throw new InvalidOperationException("Certificate does not contain an Authority Key Identifier extension.");
+
+            var akiOctets = Asn1Object.FromByteArray(akiExtension.RawData);
+            var aki = AuthorityKeyIdentifier.GetInstance(akiOctets);
+            var keyIdentifier = aki.GetKeyIdentifier();
+
+            if (keyIdentifier == null)
+                throw new InvalidOperationException("Authority Key Identifier does not contain a key identifier.");
+
+            // Get serial number as DER-encoded bytes
+            var serialBytes = certificate.GetSerialNumber();
+            // .NET returns serial number in little-endian order; reverse to big-endian (DER)
+            Array.Reverse(serialBytes);
+
+            // Compose ARI CertID: base64url(AKI keyIdentifier) "." base64url(serial)
+            return Jws.Base64UrlEncoded(keyIdentifier) + "." + Jws.Base64UrlEncoded(serialBytes);
+        }
+
+        public async Task<RenewalInfoResponse> GetRenewalInfo(X509Certificate2 certificate, CancellationToken token = default(CancellationToken))
+        {
+            if (certificate == null)
+                throw new ArgumentNullException(nameof(certificate));
+
+            var client = _client ?? new AcmeClient(GetCachedClient(_url), new RSACryptoServiceProvider(2048));
+
+            var dir = await client.EnsureDirectoryAsync(token);
+            if (dir.RenewalInfo == null)
+                return null;
+
+            string certId;
+            try
+            {
+                certId = ComputeAriCertId(certificate);
+            }
+            catch
+            {
+                return null;
+            }
+
+            return await client.GetRenewalInfoAsync(dir.RenewalInfo, certId, token);
         }
 
         #endregion
