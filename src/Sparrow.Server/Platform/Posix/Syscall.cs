@@ -25,6 +25,11 @@ namespace Sparrow.Server.Platform.Posix
             byte* buffer, int bufferSize);
 
         [DllImport(LIBC_6, SetLastError = true)]
+        public static extern IntPtr realpath(
+            [MarshalAs(UnmanagedType.LPStr)] string path,
+            byte* resolvedPath);
+
+        [DllImport(LIBC_6, SetLastError = true)]
         public static extern int mkdir(
             [MarshalAs(UnmanagedType.LPStr)] string filename,
             [MarshalAs(UnmanagedType.U2)] ushort mode);
