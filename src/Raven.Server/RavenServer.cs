@@ -1402,7 +1402,7 @@ namespace Raven.Server
             }
 
             // same certificate, but now we need to see if we need to auto update it
-            var (shouldRenew, renewalDate) = CalculateRenewalDate(currentCertificate, forceRenew);
+            var (shouldRenew, renewalDate) = await CalculateRenewalDateWithAri(currentCertificate, forceRenew);
             if (shouldRenew == false)
             {
                 // We don't want an alert here, this happens frequently.
@@ -1491,6 +1491,57 @@ namespace Raven.Server
                 return (true, firstPossibleSaturday.Date);
 
             return (false, firstPossibleSaturday.Date);
+        }
+
+        internal async Task<(bool ShouldRenew, DateTime RenewalDate)> CalculateRenewalDateWithAri(CertificateUtils.CertificateHolder currentCertificate, bool forceRenew)
+        {
+            // First, consult the ACME server's Renewal Information (ARI) endpoint if available.
+            // ARI (RFC 9773) allows the CA to suggest an early renewal window, e.g. in case of revocation or CA incident.
+            try
+            {
+                var acmeClient = new LetsEncryptClient(Configuration.Core.AcmeUrl);
+                await acmeClient.FetchDirectory(ServerStore.ServerShutdown);
+
+                if (acmeClient.SupportsAri)
+                {
+                    var renewalInfo = await acmeClient.GetRenewalInfo(currentCertificate.ServerCertificate, ServerStore.ServerShutdown);
+                    if (renewalInfo?.SuggestedWindow != null)
+                    {
+                        var now = DateTime.UtcNow;
+                        var window = renewalInfo.SuggestedWindow;
+
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations($"ARI renewal window for certificate '{currentCertificate.ServerCertificate.Thumbprint}': {window.Start:u} – {window.End:u}.");
+
+                        if (now >= window.Start && now <= window.End)
+                        {
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"ARI indicates renewal is due now for certificate '{currentCertificate.ServerCertificate.Thumbprint}'. Proceeding with renewal.");
+
+                            return (true, DateTime.UtcNow.Date);
+                        }
+
+                        if (now < window.Start)
+                        {
+                            // The CA says it's too early — don't renew yet, even if our local schedule says so.
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"ARI indicates renewal window has not started yet for certificate '{currentCertificate.ServerCertificate.Thumbprint}'. Skipping renewal until {window.Start:u}.");
+
+                            return (false, window.Start.Date);
+                        }
+
+                        // now > window.End: window has passed — fall through to local schedule
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failed to query ARI renewal information for certificate '{currentCertificate.ServerCertificate.Thumbprint}'. Falling back to local renewal schedule.", e);
+            }
+
+            // Fall back to the standard time-based renewal schedule.
+            return CalculateRenewalDate(currentCertificate, forceRenew);
         }
 
         public async Task StartCertificateReplicationAsync(X509Certificate2 newCertificate, string password, bool replaceImmediately, string raftRequestId)

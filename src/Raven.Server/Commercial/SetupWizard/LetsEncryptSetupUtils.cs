@@ -34,7 +34,7 @@ public static class LetsEncryptSetupUtils
             (string Challenge, LetsEncryptClient.CachedCertificateResult CachedCertificateResult) challengeResult;
             try
             {
-                challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, acmeProfile, token);
+                challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, acmeProfile, null, token);
 
                 progress?.AddInfo(challengeResult.Challenge != null
                     ? "Successfully received challenge(s) information from Let's Encrypt."
@@ -140,8 +140,8 @@ public static class LetsEncryptSetupUtils
         public static async Task<(string Challenge, LetsEncryptClient.CachedCertificateResult CachedCertificateResult)> InitialLetsEncryptChallenge(SetupInfo setupInfo,
             LetsEncryptClient client,
             string profile,
-            CancellationToken token,
-            string replaces = null)
+            string replaces,
+            CancellationToken token)
         {
             try
             {

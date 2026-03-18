@@ -279,7 +279,7 @@ namespace Raven.Server.Commercial
                 }
             }
 
-            var challengeResult = await LetsEncryptSetupUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, acmeProfile, token, ariCertId);
+            var challengeResult = await LetsEncryptSetupUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, acmeProfile, ariCertId, token);
 
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
@@ -708,7 +708,7 @@ namespace Raven.Server.Commercial
                 await acmeClient.Init(setupInfo.Email, token);
                 var acmeProfile = serverStore.Configuration.Core.AcmeProfile;
 
-                var challengeResult = await LetsEncryptSetupUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, acmeProfile, token);
+                var challengeResult = await LetsEncryptSetupUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, acmeProfile, null, token);
 
                 progress.Processed++;
                 progress.AddInfo(challengeResult.Challenge != null
