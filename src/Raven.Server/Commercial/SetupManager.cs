@@ -261,7 +261,25 @@ namespace Raven.Server.Commercial
             var cacheKeys = setupInfo.NodeSetupInfos.Select(node => LetsEncryptSetupUtils.GetCertCacheKey(acmeProfile, BuildHostName(node.Key, setupInfo.Domain, setupInfo.RootDomain))).ToList();
             acmeClient.ResetCachedCertificate(cacheKeys);
 
-            var challengeResult = await LetsEncryptSetupUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, acmeProfile, token);
+            // Compute ARI certID to tell the CA we are replacing the current certificate (RFC 9773)
+            string ariCertId = null;
+            var currentCertificate = serverStore.Server.Certificate?.ServerCertificate;
+            if (currentCertificate != null && acmeClient.SupportsAri)
+            {
+                try
+                {
+                    ariCertId = LetsEncryptClient.ComputeAriCertId(currentCertificate);
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Using ARI certID '{ariCertId}' for certificate replacement (RFC 9773).");
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Failed to compute ARI certID; proceeding without 'replaces' field.", e);
+                }
+            }
+
+            var challengeResult = await LetsEncryptSetupUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, acmeProfile, token, ariCertId);
 
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
