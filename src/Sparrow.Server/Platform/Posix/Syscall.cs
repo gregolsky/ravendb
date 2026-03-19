@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -19,11 +19,8 @@ namespace Sparrow.Server.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int sched_setaffinity(int pid, IntPtr cpusetsize, ref ulong cpuset);
 
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int readlink(
-            [MarshalAs(UnmanagedType.LPStr)] string path,
-            byte* buffer, int bufferSize);
-
+        // realpath(3): resolves all symlinks and relative path components, returning the canonical absolute path.
+        // resolvedPath must point to a buffer of at least PATH_MAX (4096) bytes. Returns IntPtr.Zero on failure.
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern IntPtr realpath(
             [MarshalAs(UnmanagedType.LPStr)] string path,
@@ -132,6 +129,7 @@ namespace Sparrow.Server.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         private static extern int fsync(int fd);
 
+        // Used by ReadLinkOrThrow / SyncDirectory to resolve symlinks during directory sync
         [DllImport(LIBC_6, SetLastError = true)]
         private static extern int readlink(string path, byte* buf, UIntPtr bufsiz);
 
