@@ -576,11 +576,18 @@ namespace Raven.Server.Commercial
         /// Computes the ARI certificate ID (RFC 9773) used to query renewal information.
         /// Format: base64url(SHA-256(issuerSubjectPublicKeyInfo)) + "." + base64url(serialNumber)
         /// </summary>
-        public static string ComputeAriCertId(X509Certificate2 certificate)
+        /// <param name="certificate">The certificate to compute the ARI cert ID for.</param>
+        /// <param name="extraCerts">
+        /// Optional extra certificates to add to the chain policy's extra store.
+        /// Useful when the issuer certificate is not installed in the OS certificate store.
+        /// </param>
+        public static string ComputeAriCertId(X509Certificate2 certificate, X509Certificate2Collection extraCerts = null)
         {
             using var chain = new X509Chain();
             chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
             chain.ChainPolicy.DisableCertificateDownloads = true;
+            if (extraCerts != null)
+                chain.ChainPolicy.ExtraStore.AddRange(extraCerts);
             chain.Build(certificate);
 
             if (chain.ChainElements.Count < 2)
