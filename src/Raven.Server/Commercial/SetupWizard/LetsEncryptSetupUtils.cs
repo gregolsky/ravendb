@@ -34,7 +34,7 @@ public static class LetsEncryptSetupUtils
             (string Challenge, LetsEncryptClient.CachedCertificateResult CachedCertificateResult) challengeResult;
             try
             {
-                challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, acmeProfile, token);
+                challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, acmeProfile, null, token);
 
                 progress?.AddInfo(challengeResult.Challenge != null
                     ? "Successfully received challenge(s) information from Let's Encrypt."
@@ -140,6 +140,7 @@ public static class LetsEncryptSetupUtils
         public static async Task<(string Challenge, LetsEncryptClient.CachedCertificateResult CachedCertificateResult)> InitialLetsEncryptChallenge(SetupInfo setupInfo,
             LetsEncryptClient client,
             string profile,
+            string replaces,
             CancellationToken token)
         {
             try
@@ -150,7 +151,7 @@ public static class LetsEncryptSetupUtils
                 if (client.TryGetCachedCertificate(certCacheKey, out var certBytes))
                     return (null, certBytes);
 
-                var result = await client.NewOrder(new[] {wildcardHost}, profile, token);
+                var result = await client.NewOrder(new[] {wildcardHost}, profile, replaces, token);
 
                 result.TryGetValue(host, out var challenge);
                 // we may already be authorized for this?

@@ -296,7 +296,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public async Task<Dictionary<string, string>> NewOrder(string[] hostnames, string profile = null, CancellationToken token = default(CancellationToken))
+        public async Task<Dictionary<string, string>> NewOrder(string[] hostnames, string profile = null, string replaces = null, CancellationToken token = default(CancellationToken))
         {
             _challenges.Clear();
             var dto = new Order
@@ -313,6 +313,12 @@ namespace Raven.Server.Commercial
             {
                 dto.Profile = profile;
             }
+
+            if (string.IsNullOrEmpty(replaces) == false)
+            {
+                dto.Replaces = replaces;
+            }
+
             var (order, response) = await SendAsync<Order>(HttpMethod.Post, _directory.NewOrder, dto, token);
 
             if (order.Status != "pending" && order.Status != "ready")
@@ -551,6 +557,124 @@ namespace Raven.Server.Commercial
             }
         }
 
+        /// <summary>
+        /// Fetches the ACME directory without creating or loading an account.
+        /// This lightweight init is used to check for ARI (Renewal Information) support before committing to a full renewal.
+        /// </summary>
+        public async Task FetchDirectory(CancellationToken token = default)
+        {
+            _client = GetCachedClient(_url);
+            (_directory, _) = await SendAsync<Directory>(HttpMethod.Get, new Uri(_directoryPath, UriKind.Relative), null, token);
+        }
+
+        /// <summary>
+        /// Returns true if the ACME server advertises ARI (Renewal Information) support.
+        /// </summary>
+        public bool SupportsAri => _directory?.RenewalInfo != null;
+
+        /// <summary>
+        /// Computes the ARI certificate ID (RFC 9773) used to query renewal information.
+        /// Format: base64url(SHA-256(issuerSubjectPublicKeyInfo)) + "." + base64url(serialNumber)
+        /// </summary>
+        /// <param name="certificate">The certificate to compute the ARI cert ID for.</param>
+        /// <param name="extraCerts">
+        /// Optional extra certificates to add to the chain policy's extra store.
+        /// Useful when the issuer certificate is not installed in the OS certificate store.
+        /// </param>
+        public static string ComputeAriCertId(X509Certificate2 certificate, X509Certificate2Collection extraCerts = null)
+        {
+            using var chain = new X509Chain();
+            chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+            chain.ChainPolicy.DisableCertificateDownloads = true;
+            if (extraCerts != null)
+                chain.ChainPolicy.ExtraStore.AddRange(extraCerts);
+            chain.Build(certificate);
+
+            if (chain.ChainElements.Count < 2)
+                throw new InvalidOperationException($"Cannot compute ARI certID: certificate chain for '{certificate.Subject}' has fewer than 2 elements (no issuer found).");
+
+            var issuerCert = chain.ChainElements[1].Certificate;
+
+            byte[] spkiBytes;
+            var rsaKey = issuerCert.GetRSAPublicKey();
+            if (rsaKey != null)
+            {
+                spkiBytes = rsaKey.ExportSubjectPublicKeyInfo();
+            }
+            else
+            {
+                var ecKey = issuerCert.GetECDsaPublicKey();
+                if (ecKey != null)
+                    spkiBytes = ecKey.ExportSubjectPublicKeyInfo();
+                else
+                    throw new InvalidOperationException($"Cannot compute ARI certID: unsupported issuer key type for certificate '{issuerCert.Subject}'.");
+            }
+
+            byte[] issuerKeyHash;
+            using (var sha256 = SHA256.Create())
+                issuerKeyHash = sha256.ComputeHash(spkiBytes);
+
+            // Serial number from hex string (big-endian bytes as encoded in the certificate)
+            var serialBytes = Convert.FromHexString(certificate.SerialNumber);
+
+            return Jws.Base64UrlEncoded(issuerKeyHash) + "." + Jws.Base64UrlEncoded(serialBytes);
+        }
+
+        /// <summary>
+        /// Queries the ACME server's Renewal Information (ARI) endpoint to get the suggested renewal window for the given certificate.
+        /// Returns null if ARI is not supported or if the query fails.
+        /// </summary>
+        public async Task<RenewalInfoResponse> GetRenewalInfo(X509Certificate2 certificate, CancellationToken token = default)
+        {
+            if (_directory?.RenewalInfo == null)
+                return null;
+
+            string certId;
+            try
+            {
+                certId = ComputeAriCertId(certificate);
+            }
+            catch
+            {
+                return null;
+            }
+
+            var renewalInfoUrl = _directory.RenewalInfo.ToString().TrimEnd('/') + "/" + certId;
+            HttpResponseMessage response;
+            try
+            {
+                response = await _client.GetAsync(new Uri(renewalInfoUrl), token);
+            }
+            catch
+            {
+                return null;
+            }
+
+            if (response.IsSuccessStatusCode == false)
+                return null;
+
+            var json = await response.Content.ReadAsStringWithZstdSupportAsync();
+            return JsonConvert.DeserializeObject<RenewalInfoResponse>(json);
+        }
+
+        public sealed class RenewalInfoResponse
+        {
+            [JsonProperty("suggestedWindow")]
+            public SuggestedWindow SuggestedWindow { get; set; }
+
+            [JsonProperty("explanationURL")]
+            public string ExplanationURL { get; set; }
+        }
+
+        public sealed class SuggestedWindow
+        {
+            [JsonProperty("start")]
+            public DateTime Start { get; set; }
+
+            [JsonProperty("end")]
+            public DateTime End { get; set; }
+        }
+
         internal static string GetCachePath(string acmeUrl)
         {
             var home = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
@@ -678,6 +802,9 @@ namespace Raven.Server.Commercial
 
             [JsonProperty("meta")]
             public DirectoryMeta Meta { get; set; }
+
+            [JsonProperty("renewalInfo")]
+            public Uri RenewalInfo { get; set; }
         }
 
         private sealed class DirectoryMeta
@@ -804,6 +931,9 @@ namespace Raven.Server.Commercial
             
             [JsonProperty("profile")]
             public string Profile { get; set; }
+
+            [JsonProperty("replaces")]
+            public string Replaces { get; set; }
         }
 
         private sealed class OrderIdentifier
