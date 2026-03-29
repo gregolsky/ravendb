@@ -10,6 +10,7 @@ namespace Raven.Server.Web.System
     public sealed class AdminAriDebugHandler : ServerRequestHandler
     {
         [RavenAction("/admin/debug/certificates/ari-renewal-info", "GET", AuthorizationStatus.Operator,
+            // intentionally not a debug info endpoint because it makes a live HTTP call to an external ACME server
             IsDebugInformationEndpoint = false)]
         public async Task GetAriRenewalInfo()
         {
