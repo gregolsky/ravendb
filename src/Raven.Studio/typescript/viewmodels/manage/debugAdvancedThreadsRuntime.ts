@@ -15,6 +15,13 @@ import awesomeMultiselect = require("common/awesomeMultiselect");
 type Unit = "" | "%" | "B" | "KB" | "KB/s";
 type ThreadInfo = Raven.Server.Dashboard.ThreadInfo;
 
+interface IoSnapshot {
+    syscr: number;
+    syscw: number;
+    readBytes: number;
+    writeBytes: number;
+}
+
 class debugAdvancedThreadsRuntime extends viewModelBase {
     view = require("views/manage/debugAdvancedThreadsRuntime.html");
 
@@ -35,6 +42,8 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
     isPause = ko.observable<boolean>(false);
     
     filter = ko.observable<string>();
+    
+    private initialSnapshots = new Map<number, IoSnapshot>();
 
     allColumnHeaders = [
         "Stack",
@@ -280,11 +289,39 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
     connectWebSocket() {
         eventsCollector.default.reportEvent("threads-info", "connect");
 
+        this.initialSnapshots.clear();
+
         const ws = new threadsInfoWebSocketClient(data => this.onData(data));
         this.liveClient(ws);
     }
     
     private onData(data: Raven.Server.Dashboard.ThreadsInfo) {
+        const KB = 1024;
+
+        for (const thread of data.List) {
+            if (thread.IoStats && thread.IoStats.Syscr != null) {
+                const current: IoSnapshot = {
+                    syscr: thread.IoStats.Syscr,
+                    syscw: thread.IoStats.Syscw,
+                    readBytes: thread.IoStats.ReadBytes,
+                    writeBytes: thread.IoStats.WriteBytes
+                };
+
+                if (!this.initialSnapshots.has(thread.Id)) {
+                    this.initialSnapshots.set(thread.Id, { ...current });
+                }
+
+                const initial = this.initialSnapshots.get(thread.Id);
+
+                thread.IoStats.IoSyscallsTotal = (current.syscr - initial.syscr) + (current.syscw - initial.syscw);
+                thread.IoStats.ThroughputKbTotal = ((current.readBytes - initial.readBytes) + (current.writeBytes - initial.writeBytes)) / KB;
+                thread.IoStats.ReadIoSyscallsTotal = current.syscr - initial.syscr;
+                thread.IoStats.WriteIoSyscallsTotal = current.syscw - initial.syscw;
+                thread.IoStats.ReadThroughputKbTotal = (current.readBytes - initial.readBytes) / KB;
+                thread.IoStats.WriteThroughputKbTotal = (current.writeBytes - initial.writeBytes) / KB;
+            }
+        }
+
         this.allData(data.List);
         this.machineCpuUsage(data.CpuUsage);
         this.serverCpuUsage(data.ProcessCpuUsage);
