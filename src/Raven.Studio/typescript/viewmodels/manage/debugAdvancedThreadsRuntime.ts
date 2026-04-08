@@ -15,6 +15,15 @@ import awesomeMultiselect = require("common/awesomeMultiselect");
 type Unit = "" | "%" | "B" | "KB" | "KB/s";
 type ThreadInfo = Raven.Server.Dashboard.ThreadInfo;
 
+interface AccumulatedIoTotals {
+    ioSyscalls: number;
+    throughputKb: number;
+    readIoSyscalls: number;
+    writeIoSyscalls: number;
+    readThroughputKb: number;
+    writeThroughputKb: number;
+}
+
 class debugAdvancedThreadsRuntime extends viewModelBase {
     view = require("views/manage/debugAdvancedThreadsRuntime.html");
 
@@ -35,6 +44,9 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
     isPause = ko.observable<boolean>(false);
     
     filter = ko.observable<string>();
+    
+    private lastDataDate: string | null = null;
+    private accumulatedTotals = new Map<number, AccumulatedIoTotals>();
 
     allColumnHeaders = [
         "Stack",
@@ -280,11 +292,53 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
     connectWebSocket() {
         eventsCollector.default.reportEvent("threads-info", "connect");
 
+        this.lastDataDate = null;
+
         const ws = new threadsInfoWebSocketClient(data => this.onData(data));
         this.liveClient(ws);
     }
     
     private onData(data: Raven.Server.Dashboard.ThreadsInfo) {
+        let timeDeltaSec = 0;
+        if (this.lastDataDate) {
+            timeDeltaSec = (new Date(data.Date).getTime() - new Date(this.lastDataDate).getTime()) / 1000;
+            if (timeDeltaSec <= 0) {
+                timeDeltaSec = 0;
+            }
+        }
+        this.lastDataDate = data.Date;
+
+        for (const thread of data.List) {
+            if (thread.IoStats) {
+                let acc = this.accumulatedTotals.get(thread.Id);
+                if (!acc) {
+                    acc = {
+                        ioSyscalls: 0,
+                        throughputKb: 0,
+                        readIoSyscalls: 0,
+                        writeIoSyscalls: 0,
+                        readThroughputKb: 0,
+                        writeThroughputKb: 0
+                    };
+                    this.accumulatedTotals.set(thread.Id, acc);
+                }
+
+                acc.ioSyscalls += (thread.IoStats.IoSyscallsPerSecLast || 0) * timeDeltaSec;
+                acc.throughputKb += (thread.IoStats.ThroughputKbPerSecLast || 0) * timeDeltaSec;
+                acc.readIoSyscalls += (thread.IoStats.ReadIoSyscallsPerSecLast || 0) * timeDeltaSec;
+                acc.writeIoSyscalls += (thread.IoStats.WriteIoSyscallsPerSecLast || 0) * timeDeltaSec;
+                acc.readThroughputKb += (thread.IoStats.ReadThroughputKbPerSecLast || 0) * timeDeltaSec;
+                acc.writeThroughputKb += (thread.IoStats.WriteThroughputKbPerSecLast || 0) * timeDeltaSec;
+
+                thread.IoStats.IoSyscallsTotal = Math.round(acc.ioSyscalls);
+                thread.IoStats.ThroughputKbTotal = acc.throughputKb;
+                thread.IoStats.ReadIoSyscallsTotal = Math.round(acc.readIoSyscalls);
+                thread.IoStats.WriteIoSyscallsTotal = Math.round(acc.writeIoSyscalls);
+                thread.IoStats.ReadThroughputKbTotal = acc.readThroughputKb;
+                thread.IoStats.WriteThroughputKbTotal = acc.writeThroughputKb;
+            }
+        }
+
         this.allData(data.List);
         this.machineCpuUsage(data.CpuUsage);
         this.serverCpuUsage(data.ProcessCpuUsage);

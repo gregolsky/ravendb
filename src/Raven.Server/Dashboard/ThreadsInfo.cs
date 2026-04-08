@@ -75,20 +75,12 @@ namespace Raven.Server.Dashboard
         public double? IoSyscallsPerSecLast { get; set; }
         // Last measured throughput in KB/s based on read_bytes+write_bytes delta
         public double? ThroughputKbPerSecLast { get; set; }
-        // Total number of I/O operations since metering started
-        public long? IoSyscallsTotal { get; set; }
-        // Total data volume in KB since metering started
-        public double? ThroughputKbTotal { get; set; }
 
         // Split read/write metrics
         public double? ReadIoSyscallsPerSecLast { get; set; }
         public double? WriteIoSyscallsPerSecLast { get; set; }
         public double? ReadThroughputKbPerSecLast { get; set; }
         public double? WriteThroughputKbPerSecLast { get; set; }
-        public long? ReadIoSyscallsTotal { get; set; }
-        public long? WriteIoSyscallsTotal { get; set; }
-        public double? ReadThroughputKbTotal { get; set; }
-        public double? WriteThroughputKbTotal { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -96,16 +88,10 @@ namespace Raven.Server.Dashboard
             {
                 [nameof(IoSyscallsPerSecLast)] = IoSyscallsPerSecLast,
                 [nameof(ThroughputKbPerSecLast)] = ThroughputKbPerSecLast,
-                [nameof(IoSyscallsTotal)] = IoSyscallsTotal,
-                [nameof(ThroughputKbTotal)] = ThroughputKbTotal,
                 [nameof(ReadIoSyscallsPerSecLast)] = ReadIoSyscallsPerSecLast,
                 [nameof(WriteIoSyscallsPerSecLast)] = WriteIoSyscallsPerSecLast,
                 [nameof(ReadThroughputKbPerSecLast)] = ReadThroughputKbPerSecLast,
-                [nameof(WriteThroughputKbPerSecLast)] = WriteThroughputKbPerSecLast,
-                [nameof(ReadIoSyscallsTotal)] = ReadIoSyscallsTotal,
-                [nameof(WriteIoSyscallsTotal)] = WriteIoSyscallsTotal,
-                [nameof(ReadThroughputKbTotal)] = ReadThroughputKbTotal,
-                [nameof(WriteThroughputKbTotal)] = WriteThroughputKbTotal
+                [nameof(WriteThroughputKbPerSecLast)] = WriteThroughputKbPerSecLast
             };
         }
     }

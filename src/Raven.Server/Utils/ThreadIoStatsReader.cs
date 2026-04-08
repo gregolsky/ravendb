@@ -21,18 +21,12 @@ namespace Raven.Server.Utils
         {
             public double IoSyscallsPerSecLast;
             public double KbPerSecLast;
-            public long IoSyscallsTotal;
-            public double KbTotal;
 
             // Split metrics when available
             public double? ReadIoSyscallsPerSecLast;
             public double? WriteIoSyscallsPerSecLast;
             public double? ReadKbPerSecLast;
             public double? WriteKbPerSecLast;
-            public long? ReadSyscallsTotal;
-            public long? WriteSyscallsTotal;
-            public double? ReadKbTotal;
-            public double? WriteKbTotal;
         }
 
         private ThreadIoStatsReader()
@@ -215,37 +209,22 @@ namespace Raven.Server.Utils
                         var readKbPerSec = dReadBytes / Kb / elapsed;
                         var writeKbPerSec = dWriteBytes / Kb / elapsed;
 
-                        var opsTotal = syscr + syscw;
-                        var kbTotal = (readBytes + writeBytes) / Kb;
-
                         _stats.AddOrUpdate(tid, new Stats
                         {
                             IoSyscallsPerSecLast = readOpsPerSec + writeOpsPerSec,
                             KbPerSecLast = readKbPerSec + writeKbPerSec,
-                            IoSyscallsTotal = opsTotal,
-                            KbTotal = kbTotal,
                             ReadIoSyscallsPerSecLast = readOpsPerSec,
                             WriteIoSyscallsPerSecLast = writeOpsPerSec,
                             ReadKbPerSecLast = readKbPerSec,
-                            WriteKbPerSecLast = writeKbPerSec,
-                            ReadSyscallsTotal = syscr,
-                            WriteSyscallsTotal = syscw,
-                            ReadKbTotal = readBytes / Kb,
-                            WriteKbTotal = writeBytes / Kb
+                            WriteKbPerSecLast = writeKbPerSec
                         }, (kk, s) =>
                         {
                             s.IoSyscallsPerSecLast = readOpsPerSec + writeOpsPerSec;
                             s.KbPerSecLast = readKbPerSec + writeKbPerSec;
-                            s.IoSyscallsTotal = opsTotal;
-                            s.KbTotal = kbTotal;
                             s.ReadIoSyscallsPerSecLast = readOpsPerSec;
                             s.WriteIoSyscallsPerSecLast = writeOpsPerSec;
                             s.ReadKbPerSecLast = readKbPerSec;
                             s.WriteKbPerSecLast = writeKbPerSec;
-                            s.ReadSyscallsTotal = syscr;
-                            s.WriteSyscallsTotal = syscw;
-                            s.ReadKbTotal = readBytes / Kb;
-                            s.WriteKbTotal = writeBytes / Kb;
                             return s;
                         });
 
