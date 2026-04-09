@@ -83,7 +83,8 @@ namespace Raven.Server.Dashboard
         public double? WriteThroughputKbPerSecLast { get; set; }
 
         // Raw cumulative values from /proc/self/task/{tid}/io
-        // The client uses these to compute totals as (current - initial_snapshot)
+        // These are monotonically increasing counters for the lifetime of each thread.
+        // The client uses these to compute totals as (current - initial_snapshot).
         public long? Syscr { get; set; }
         public long? Syscw { get; set; }
         public long? ReadBytes { get; set; }
