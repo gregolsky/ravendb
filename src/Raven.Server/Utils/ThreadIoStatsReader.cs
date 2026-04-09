@@ -27,6 +27,12 @@ namespace Raven.Server.Utils
             public double? WriteIoSyscallsPerSecLast;
             public double? ReadKbPerSecLast;
             public double? WriteKbPerSecLast;
+
+            // Raw cumulative values from /proc
+            public long Syscr;
+            public long Syscw;
+            public long ReadBytes;
+            public long WriteBytes;
         }
 
         private ThreadIoStatsReader()
@@ -216,7 +222,11 @@ namespace Raven.Server.Utils
                             ReadIoSyscallsPerSecLast = readOpsPerSec,
                             WriteIoSyscallsPerSecLast = writeOpsPerSec,
                             ReadKbPerSecLast = readKbPerSec,
-                            WriteKbPerSecLast = writeKbPerSec
+                            WriteKbPerSecLast = writeKbPerSec,
+                            Syscr = syscr,
+                            Syscw = syscw,
+                            ReadBytes = readBytes,
+                            WriteBytes = writeBytes
                         }, (kk, s) =>
                         {
                             s.IoSyscallsPerSecLast = readOpsPerSec + writeOpsPerSec;
@@ -225,6 +235,10 @@ namespace Raven.Server.Utils
                             s.WriteIoSyscallsPerSecLast = writeOpsPerSec;
                             s.ReadKbPerSecLast = readKbPerSec;
                             s.WriteKbPerSecLast = writeKbPerSec;
+                            s.Syscr = syscr;
+                            s.Syscw = syscw;
+                            s.ReadBytes = readBytes;
+                            s.WriteBytes = writeBytes;
                             return s;
                         });
 

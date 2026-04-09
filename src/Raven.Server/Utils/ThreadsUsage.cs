@@ -156,7 +156,12 @@ namespace Raven.Server.Utils
                                             ReadIoSyscallsPerSecLast = io.ReadIoSyscallsPerSecLast,
                                             WriteIoSyscallsPerSecLast = io.WriteIoSyscallsPerSecLast,
                                             ReadThroughputKbPerSecLast = io.ReadKbPerSecLast,
-                                            WriteThroughputKbPerSecLast = io.WriteKbPerSecLast
+                                            WriteThroughputKbPerSecLast = io.WriteKbPerSecLast,
+
+                                            Syscr = io.Syscr,
+                                            Syscw = io.Syscw,
+                                            ReadBytes = io.ReadBytes,
+                                            WriteBytes = io.WriteBytes
                                         };
                                     }
                                 }

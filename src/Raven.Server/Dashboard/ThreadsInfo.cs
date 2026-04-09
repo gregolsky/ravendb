@@ -82,6 +82,13 @@ namespace Raven.Server.Dashboard
         public double? ReadThroughputKbPerSecLast { get; set; }
         public double? WriteThroughputKbPerSecLast { get; set; }
 
+        // Raw cumulative values from /proc/self/task/{tid}/io
+        // The client uses these to compute totals as (current - initial_snapshot)
+        public long? Syscr { get; set; }
+        public long? Syscw { get; set; }
+        public long? ReadBytes { get; set; }
+        public long? WriteBytes { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -91,7 +98,11 @@ namespace Raven.Server.Dashboard
                 [nameof(ReadIoSyscallsPerSecLast)] = ReadIoSyscallsPerSecLast,
                 [nameof(WriteIoSyscallsPerSecLast)] = WriteIoSyscallsPerSecLast,
                 [nameof(ReadThroughputKbPerSecLast)] = ReadThroughputKbPerSecLast,
-                [nameof(WriteThroughputKbPerSecLast)] = WriteThroughputKbPerSecLast
+                [nameof(WriteThroughputKbPerSecLast)] = WriteThroughputKbPerSecLast,
+                [nameof(Syscr)] = Syscr,
+                [nameof(Syscw)] = Syscw,
+                [nameof(ReadBytes)] = ReadBytes,
+                [nameof(WriteBytes)] = WriteBytes
             };
         }
     }
