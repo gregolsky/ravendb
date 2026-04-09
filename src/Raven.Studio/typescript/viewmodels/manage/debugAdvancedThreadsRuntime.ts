@@ -13,7 +13,19 @@ import eventsCollector = require("common/eventsCollector");
 import awesomeMultiselect = require("common/awesomeMultiselect");
 
 type Unit = "" | "%" | "B" | "KB" | "KB/s";
-type ThreadInfo = Raven.Server.Dashboard.ThreadInfo;
+
+interface IoStatsWithTotals extends Raven.Server.Dashboard.IoStats {
+    IoSyscallsTotal?: number;
+    ReadIoSyscallsTotal?: number;
+    WriteIoSyscallsTotal?: number;
+    ThroughputKbTotal?: number;
+    ReadThroughputKbTotal?: number;
+    WriteThroughputKbTotal?: number;
+}
+
+interface ThreadInfo extends Omit<Raven.Server.Dashboard.ThreadInfo, "IoStats"> {
+    IoStats?: IoStatsWithTotals;
+}
 
 interface IoSnapshot {
     syscr: number;
@@ -297,8 +309,9 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
     
     private onData(data: Raven.Server.Dashboard.ThreadsInfo) {
         const KB = 1024;
+        const threads = data.List as ThreadInfo[];
 
-        for (const thread of data.List) {
+        for (const thread of threads) {
             if (thread.IoStats && thread.IoStats.Syscr != null) {
                 const current: IoSnapshot = {
                     syscr: thread.IoStats.Syscr,
@@ -322,7 +335,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
             }
         }
 
-        this.allData(data.List);
+        this.allData(threads);
         this.machineCpuUsage(data.CpuUsage);
         this.serverCpuUsage(data.ProcessCpuUsage);
         this.dedicatedThreadsCount(data.DedicatedThreadsCount);
