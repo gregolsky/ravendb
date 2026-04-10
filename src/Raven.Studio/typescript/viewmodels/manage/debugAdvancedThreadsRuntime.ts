@@ -57,7 +57,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
     
     showTotalsSinceThreadCreation = ko.observable<boolean>(false);
     
-    private initialSnapshots = new Map<number, IoSnapshot>();
+    private initialSnapshots = new Map<string, IoSnapshot>();
 
     allColumnHeaders = [
         "Stack",
@@ -321,6 +321,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
 
         for (const thread of threads) {
             if (thread.IoStats && thread.IoStats.Syscr != null) {
+                const snapshotKey = thread.Id + "_" + thread.StartingTime;
                 const current: IoSnapshot = {
                     syscr: thread.IoStats.Syscr,
                     syscw: thread.IoStats.Syscw,
@@ -328,8 +329,8 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                     writeBytes: thread.IoStats.WriteBytes
                 };
 
-                if (!this.initialSnapshots.has(thread.Id)) {
-                    this.initialSnapshots.set(thread.Id, { ...current });
+                if (!this.initialSnapshots.has(snapshotKey)) {
+                    this.initialSnapshots.set(snapshotKey, { ...current });
                 }
 
                 if (sinceCreation) {
@@ -342,7 +343,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                     thread.IoStats.WriteThroughputKbTotal = current.writeBytes / KB;
                 } else {
                     // Use snapshot deltas (total since monitoring started)
-                    const initial = this.initialSnapshots.get(thread.Id);
+                    const initial = this.initialSnapshots.get(snapshotKey);
 
                     thread.IoStats.IoSyscallsTotal = (current.syscr - initial.syscr) + (current.syscw - initial.syscw);
                     thread.IoStats.ThroughputKbTotal = ((current.readBytes - initial.readBytes) + (current.writeBytes - initial.writeBytes)) / KB;
