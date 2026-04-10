@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Version>6.2.15-custom-62</Version>
+    <Version></Version>
     <Description>RavenDB Embedded library to run ravendb in embedded way</Description>
     <Authors>RavenDB</Authors>
     <OutputType>Library</OutputType>
