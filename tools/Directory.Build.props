@@ -1,6 +1,6 @@
 ﻿<Project>
   <PropertyGroup>
-    <Version></Version>
+    <Version>6.2.15-custom-62</Version>
     <LangVersion>preview</LangVersion>
     <DebugType>embedded</DebugType>
     <WarningsAsErrors>true</WarningsAsErrors>

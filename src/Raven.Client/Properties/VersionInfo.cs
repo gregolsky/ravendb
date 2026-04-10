@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Reflection;
 using Raven.Client.Extensions;
 using Raven.Client.Properties;
 
-[assembly: RavenVersion(Build = "62", CommitHash = "a377982", Version = "6.2", FullVersion = "6.2.15-custom-62", ReleaseDateString = "2026-03-17")]
+[assembly: RavenVersion(Build = "62", CommitHash = "b27b88c", Version = "6.2", FullVersion = "6.2.15-custom-62", ReleaseDateString = "2026-04-10")]
 
 namespace Raven.Client.Properties
 {
