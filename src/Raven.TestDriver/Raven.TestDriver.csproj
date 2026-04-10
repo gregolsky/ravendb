@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Version>6.2.15-custom-62</Version>
+    <Version></Version>
     <Description></Description>
     <Title>RavenDB TestDriver</Title>
     <Product>RavenDB TestDriver</Product>
