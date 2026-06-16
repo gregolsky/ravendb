@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Threading;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server.Logging;
@@ -114,6 +115,8 @@ namespace Sparrow.Server.LowMemory
             _lowMemoryCommitLimitInMb = lowMemoryCommitLimitInMb;
         }
 
+        private static readonly MultipleUseFlag _isAboutToRunOutOfMemory = new MultipleUseFlag();
+
         public static void AssertNotAboutToRunOutOfMemory()
         {
             if (EnableEarlyOutOfMemoryChecks == false)
@@ -126,6 +129,12 @@ namespace Sparrow.Server.LowMemory
                 EnableEarlyOutOfMemoryCheck == false)   // but we want to enable this manually if needed
                 return;
 
+            if (_isAboutToRunOutOfMemory.IsRaised() == false)
+                return;
+
+            // The background thread flagged potential memory pressure.
+            // Re-check with fresh data so allocations can still proceed
+            // if memory has been freed since the last background check.
             var memInfo = GetEarlyOutOfMemoryInfo();
             if (IsEarlyOutOfMemoryInternal(memInfo, earlyOutOfMemoryWarning: false, out _))
                 ThrowInsufficientMemory(GetMemoryInfo());
@@ -140,12 +149,23 @@ namespace Sparrow.Server.LowMemory
                 return false;
             }
 
-            return IsEarlyOutOfMemoryInternal(new LightWeightMemoryInfoResult
+            var lightWeight = new LightWeightMemoryInfoResult
             {
                 AvailableMemory = memInfo.AvailableMemory,
                 CurrentCommitCharge = memInfo.CurrentCommitCharge,
                 TotalCommittableMemory = memInfo.TotalCommittableMemory
-            }, earlyOutOfMemoryWarning: true, out commitChargeThreshold);
+            };
+
+            bool result = IsEarlyOutOfMemoryInternal(lightWeight, earlyOutOfMemoryWarning: true, out commitChargeThreshold);
+
+            // Update the flag for the allocation hot-path (AssertNotAboutToRunOutOfMemory).
+            // Piggybacking on the background thread's periodic check avoids fetching memory info twice.
+            if (result)
+                _isAboutToRunOutOfMemory.Raise();
+            else
+                _isAboutToRunOutOfMemory.Lower();
+
+            return result;
         }
 
         private static bool IsEarlyOutOfMemoryInternal(LightWeightMemoryInfoResult memInfo, bool earlyOutOfMemoryWarning, out Size commitChargeThreshold)
@@ -513,6 +533,51 @@ namespace Sparrow.Server.LowMemory
 
         private static bool _reportedQueryJobObjectFailure = false;
 
+        private static unsafe bool TryApplyJobObjectMemoryLimits(long workingSet, ref long memoryStatusUllAvailPhys,
+            ref long totalPageFile, ref long availPageFile, ref long availableMemoryForProcessingInBytes)
+        {
+            Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = default;
+            if (Win32MemoryMethods.QueryInformationJobObject(IntPtr.Zero,
+                    Win32MemoryMethods.JOBOBJECTINFOCLASS.ExtendedLimitInformation, (void*)&limits,
+                    sizeof(Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION),
+                    out int limitsOutputSize) == false ||
+                limitsOutputSize != sizeof(Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION))
+            {
+                if (_reportedQueryJobObjectFailure == false && Logger.IsInfoEnabled)
+                {
+                    _reportedQueryJobObjectFailure = true;
+                    Logger.Info(
+                        $"Failure when trying to query job object information from Windows, error code is: {Marshal.GetLastWin32Error()}. Output size: {limitsOutputSize} instead of {sizeof(Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION)}!");
+                }
+                return false;
+            }
+
+            long maxSize = long.MaxValue;
+            if (limits.BasicLimitInformation.MaximumWorkingSetSize != UIntPtr.Zero)
+            {
+                maxSize = (long)limits.BasicLimitInformation.MaximumWorkingSetSize;
+            }
+
+            if (limits.ProcessMemoryLimit != UIntPtr.Zero)
+            {
+                maxSize = Math.Min(maxSize, (long)limits.ProcessMemoryLimit);
+            }
+
+            if (limits.JobMemoryLimit != UIntPtr.Zero)
+            {
+                maxSize = Math.Min(maxSize, (long)limits.JobMemoryLimit);
+            }
+
+            if (maxSize == long.MaxValue)
+                return false;
+
+            availableMemoryForProcessingInBytes = Math.Max(maxSize - workingSet, 0);
+            availPageFile = Math.Max(maxSize - workingSet, 0);
+            totalPageFile = maxSize;
+            memoryStatusUllAvailPhys = Math.Min(availableMemoryForProcessingInBytes, memoryStatusUllAvailPhys);
+            return true;
+        }
+
         private static unsafe MemoryInfoResult GetMemoryInfoWindows()
         {
             // windows
@@ -535,50 +600,9 @@ namespace Sparrow.Server.LowMemory
             var availableMemoryForProcessingInBytes = memoryStatusUllAvailPhys + sharedCleanInBytes;
 
             string remarks = null;
-            if (Win32MemoryMethods.IsProcessInJob(ProcessHandle, IntPtr.Zero, out var isInJob) && isInJob)
-            {
-                Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = default;
-                if (Win32MemoryMethods.QueryInformationJobObject(IntPtr.Zero,
-                        Win32MemoryMethods.JOBOBJECTINFOCLASS.ExtendedLimitInformation, (void*)&limits,
-                        sizeof(Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION),
-                    out int limitsOutputSize) == false || 
-                    limitsOutputSize != sizeof(Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION))
-            {
-                if (_reportedQueryJobObjectFailure == false && Logger.IsWarnEnabled)
-                {
-                    _reportedQueryJobObjectFailure = true;
-                    Logger.Warn(
-                            $"Failure when trying to query job object information info from Windows, error code is: {Marshal.GetLastWin32Error()}. Output size: {limitsOutputSize} instead of {sizeof(Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION)}!");
-                }
-            }
-            else
-            {
-                long maxSize = long.MaxValue;
-                if (limits.BasicLimitInformation.MaximumWorkingSetSize != UIntPtr.Zero)
-                {
-                    maxSize = (long)limits.BasicLimitInformation.MaximumWorkingSetSize;
-                }
-
-                if (limits.ProcessMemoryLimit != UIntPtr.Zero)
-                {
-                    maxSize = Math.Min(maxSize, (long)limits.ProcessMemoryLimit);
-                }
-                
-                if (limits.JobMemoryLimit != UIntPtr.Zero)
-                {
-                    maxSize = Math.Min(maxSize, (long)limits.ProcessMemoryLimit);
-                }
-
-                if (maxSize != long.MaxValue)
-                {
-                        availableMemoryForProcessingInBytes = Math.Max(maxSize - workingSet, 0);
-                        availPageFile = Math.Max(maxSize - workingSet, 0);
-                    totalPageFile = maxSize;
-                    memoryStatusUllAvailPhys = Math.Min(availableMemoryForProcessingInBytes, memoryStatusUllAvailPhys);
-                    remarks = "Memory limited by Job Object limits";
-                }
-            }
-            }
+            if (Win32MemoryMethods.IsProcessInJob(ProcessHandle, IntPtr.Zero, out var isInJob) && isInJob &&
+                TryApplyJobObjectMemoryLimits(workingSet, ref memoryStatusUllAvailPhys, ref totalPageFile, ref availPageFile, ref availableMemoryForProcessingInBytes))
+                remarks = "Memory limited by Job Object limits";
 
             return new MemoryInfoResult
             {

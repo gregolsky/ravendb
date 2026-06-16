@@ -517,6 +517,8 @@ namespace Raven.Server.ServerWide
                     case nameof(ToggleSubscriptionStateCommand):
                     case nameof(UpdateSubscriptionClientConnectionTime):
                     case nameof(UpdateSnmpDatabaseIndexesMappingCommand):
+                    case nameof(UpdateSnmpDatabaseEtlsMappingCommand):
+                    case nameof(UpdateSnmpDatabaseAiTasksMappingCommand):
                     case nameof(RemoveEtlProcessStateCommand):
                     case nameof(UpdateQueueSinkProcessStateCommand):
                     case nameof(RemoveQueueSinkProcessStateCommand):
@@ -2873,15 +2875,15 @@ namespace Raven.Server.ServerWide
         private readonly (ByteString Name, int Version, SnapshotEntryType Type)[] _snapshotEntries =
         {
             (Items.Content, ClusterCommandsVersionManager.Base40CommandsVersion, SnapshotEntryType.Command),
-            (CompareExchange.Content, ClusterCommandsVersionManager.Base40CommandsVersion,SnapshotEntryType.Command),
-            (Identities.Content, ClusterCommandsVersionManager.Base40CommandsVersion,SnapshotEntryType.Command),
+            (CompareExchange.Content, ClusterCommandsVersionManager.Base40CommandsVersion, SnapshotEntryType.Command),
+            (Identities.Content, ClusterCommandsVersionManager.Base40CommandsVersion, SnapshotEntryType.Command),
 
-            (TransactionCommands.Content, ClusterCommandsVersionManager.Base41CommandsVersion,SnapshotEntryType.Command),
-            (TransactionCommandsCountPerDatabase.Content, ClusterCommandsVersionManager.Base41CommandsVersion,SnapshotEntryType.Command),
+            (TransactionCommands.Content, ClusterCommandsVersionManager.Base41CommandsVersion, SnapshotEntryType.Command),
+            (TransactionCommandsCountPerDatabase.Content, ClusterCommandsVersionManager.Base41CommandsVersion, SnapshotEntryType.Command),
 
-            (CompareExchangeTombstones.Content, ClusterCommandsVersionManager.Base42CommandsVersion,SnapshotEntryType.Command),
-            (CertificatesSlice.Content, ClusterCommandsVersionManager.Base42CommandsVersion,SnapshotEntryType.Command),
-            (RachisLogHistory.LogHistorySlice.Content, 42_000,SnapshotEntryType.Core),
+            (CompareExchangeTombstones.Content, ClusterCommandsVersionManager.Base42CommandsVersion, SnapshotEntryType.Command),
+            (CertificatesSlice.Content, ClusterCommandsVersionManager.Base42CommandsVersion, SnapshotEntryType.Command),
+            (RachisLogHistory.LogHistorySlice.Content, 42_000, SnapshotEntryType.Core),
             (CompareExchangeExpirationStorage.CompareExchangeByExpiration.Content, 51_000, SnapshotEntryType.Command),
             (SubscriptionState.Content, 53_000, SnapshotEntryType.Command)
         };
@@ -4757,7 +4759,7 @@ namespace Raven.Server.ServerWide
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
                 {
-                    var tasks = new Task[databases.Length + 2];
+                    var tasks = new Task[databases.Length + 3];
                     // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
                     for (var index = 0; index < databases.Length; index++)
                     {
@@ -4776,6 +4778,11 @@ namespace Raven.Server.ServerWide
                     tasks[databases.Length + 1] = Task.Run(async () =>
                     {
                         await Changes.OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
+                    });
+
+                    tasks[databases.Length + 2] = Task.Run(async () =>
+                    {
+                        await Changes.OnValueChanges(lastIncludedIndex, nameof(PutCertificateCommand));
                     });
 
                     Task.WhenAll(tasks).ContinueWith(task =>

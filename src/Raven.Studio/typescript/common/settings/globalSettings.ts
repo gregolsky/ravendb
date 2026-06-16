@@ -22,11 +22,15 @@ class globalSettings extends abstractSettings {
     pinnedNotifications = new simpleStudioSetting<boolean | undefined>("local", false, x => this.saveSetting(x));
 
     isRequireTypedConfirmationToDeleteDocuments = new simpleStudioSetting<boolean>("local", true, x => this.saveSetting(x));
+    isRequireTypedConfirmationToDeleteEtlErrors = new simpleStudioSetting<boolean>("local", true, x => this.saveSetting(x));
 
     isChatbotAlwaysAllowEndpointCalls = new simpleStudioSetting<boolean>("local", false, x => this.saveSetting(x));
     isChatbotDataSubmissionEnabled = new simpleStudioSetting<boolean>("local", true, x => this.saveSetting(x));
 
     feedback = new simpleStudioSetting<feedbackSavedSettingsDto>("local", null, x => this.saveSetting(x));
+
+    tableFont = new simpleStudioSetting<string>("local", "default", x => this.saveSetting(x));
+    monospaceFont = new simpleStudioSetting<string>("local", "default", x => this.saveSetting(x));
 
     constructor(remoteSettingsLoader: () => JQueryPromise<Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration>,
                 remoteSettingsSaver: (settings: Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration) => JQueryPromise<void>, 

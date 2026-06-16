@@ -11,7 +11,7 @@ namespace Raven.Embedded
 
         internal static string AltServerDirectory = Path.Combine(AppContext.BaseDirectory, "bin", "RavenDBServer");
 
-        public string FrameworkVersion { get; set; } = "10.0.6+";
+        public string FrameworkVersion { get; set; } = "10.0.8+";
 
         public string LogsPath { get; set; } = Path.Combine(AppContext.BaseDirectory, "RavenDB", "Logs");
 
@@ -24,6 +24,8 @@ namespace Raven.Embedded
         public string ServerUrl { get; set; }
 
         public TimeSpan GracefulShutdownTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+        public TimeSpan ProcessKillTimeout { get; set; } = TimeSpan.FromSeconds(5);
 
         public TimeSpan MaxServerStartupTimeDuration { get; set; } = TimeSpan.FromMinutes(1);
 
