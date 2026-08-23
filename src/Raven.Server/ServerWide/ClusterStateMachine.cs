@@ -798,8 +798,8 @@ namespace Raven.Server.ServerWide
                             $"Cannot set typed value of type {type} for database {database}, because it does not exist");
                     }
 
-                    var id = updateCommand.FindFreeId(context, index);
-                    updateCommand.Execute(context, items, id, record: null, _parent.CurrentState, out _);
+                    updateCommand.SubscriptionId = updateCommand.FindFreeId(context, index);
+                    updateCommand.Execute(context, items, index, record: null, _parent.CurrentState, out _);
 
                     if (databases.Add(database))
                     {
@@ -2477,8 +2477,17 @@ namespace Raven.Server.ServerWide
                 using (var cert = context.ReadObject(command.ValueToJson(), "inner-val"))
                 {
                     if (_clusterAuditLog.IsInfoEnabled)
-                        _clusterAuditLog.Info($"Registering new certificate '{command.Value.Thumbprint}' in the cluster. Security Clearance: {command.Value.SecurityClearance}. " +
-                                              $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, command.Value.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
+                    {
+                        // the same code path handles both the initial registration and later edits of a certificate,
+                        // so check whether the thumbprint already exists to word the audit line accordingly
+                        var alreadyExists = certs.ReadByKey(thumbprintSlice, out _);
+                        var action = alreadyExists ? "Updating" : "Registering new";
+                        var permissions = command.Value.Permissions is { Count: > 0 }
+                            ? $" Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, command.Value.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value))}"
+                            : string.Empty;
+
+                        _clusterAuditLog.Info($"{action} certificate '{command.Value.Thumbprint}' in the cluster. Security Clearance: {command.Value.SecurityClearance}.{permissions}");
+                    }
 
                     UpdateCertificate(certs, thumbprintSlice, hashSlice, cert);
                     return;
@@ -4725,7 +4734,7 @@ namespace Raven.Server.ServerWide
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
                 {
-                    var tasks = new Task[databases.Length + 2];
+                    var tasks = new Task[databases.Length + 3];
                     // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
                     for (var index = 0; index < databases.Length; index++)
                     {
@@ -4744,6 +4753,11 @@ namespace Raven.Server.ServerWide
                     tasks[databases.Length + 1] = Task.Run(async () =>
                     {
                         await Changes.OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
+                    });
+
+                    tasks[databases.Length + 2] = Task.Run(async () =>
+                    {
+                        await Changes.OnValueChanges(lastIncludedIndex, nameof(PutCertificateCommand));
                     });
 
                     Task.WhenAll(tasks).ContinueWith(task =>

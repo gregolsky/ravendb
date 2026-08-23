@@ -72,6 +72,7 @@ using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
 using Jint;
 using Sparrow.Server.Utils;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents
 {
@@ -80,6 +81,8 @@ namespace Raven.Server.Documents
         private readonly ServerStore _serverStore;
         private readonly Action<LogMode, string> _addToInitLog;
         private readonly Logger _logger;
+        public Logger Logger => _logger;
+
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
         internal TestingStuff ForTestingPurposes;
 
@@ -431,6 +434,7 @@ namespace Raven.Server.Documents
                 OnDatabaseRecordChanged(record);
 
                 SupportedFeatures = new SupportedFeature(record);
+                DocumentsStorage.PersistSupportedFeatures(record.SupportedFeatures);
 
                 ReplicationLoader = CreateReplicationLoader();
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
@@ -929,7 +933,7 @@ namespace Raven.Server.Documents
         {
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Starting dispose");
 
-            _databaseShutdown.Cancel();
+            _databaseShutdown.SafeCancel(_logger, $"{nameof(DocumentDatabase)}: {Name}");
 
             _serverStore.Server.ServerCertificateChanged -= OnCertificateChange;
 
@@ -2198,6 +2202,8 @@ namespace Raven.Server.Documents
 
             internal AsyncManualResetEvent DelayQueryByPatch;
 
+            internal AsyncManualResetEvent DelayDeleteBucket;
+
             internal bool EnableWritesToTheWrongShard = false;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
@@ -2272,11 +2278,15 @@ namespace Raven.Server.Documents
 
             if (databaseRecord.SupportedFeatures.Contains(Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix))
                 SupportedFeatureTypes.ThrowRevisionKeyTooBigFix = true;
+            
+            if (databaseRecord.SupportedFeatures.Contains(Constants.DatabaseRecord.SupportedFeatures.ThrowControlCharactersInIdentifier))
+                SupportedFeatureTypes.ThrowControlCharactersInIdentifier = true;
         }
     }
 
     public class SupportedFeatureTypes
     {
         public bool ThrowRevisionKeyTooBigFix;
+        public bool ThrowControlCharactersInIdentifier;
     }
 }

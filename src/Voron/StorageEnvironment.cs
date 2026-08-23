@@ -96,7 +96,9 @@ namespace Voron
         internal readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1, 1);
         internal NativeMemory.ThreadStats _currentWriteTransactionHolder;
         private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
+#pragma warning disable CS0618 // the journal flush is the one remaining user of this lock
         internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
+#pragma warning restore CS0618
         private readonly ReaderWriterLockSlim _txCreation = new ReaderWriterLockSlim();
         private readonly CountdownEvent _envDispose = new CountdownEvent(1);
 
@@ -117,6 +119,9 @@ namespace Voron
         public DateTime LastWorkTime;
 
         public bool Disposed;
+
+        public bool IsDisposing => _cancellationTokenSource.IsCancellationRequested || _envDispose.IsSet;
+
         private readonly Logger _log;
         public static int MaxConcurrentFlushes = 10; // RavenDB-5221
         public int TimeToSyncAfterFlushInSec;
@@ -151,7 +156,10 @@ namespace Voron
                 var remainingBits = _lastValidPageAfterLoad % (8 * sizeof(long));
 
                 _validPagesAfterLoad = new long[_lastValidPageAfterLoad / (8 * sizeof(long)) + (remainingBits == 0 ? 0 : 1)];
-                _validPagesAfterLoad[^1] |= unchecked(((long)ulong.MaxValue << (int)remainingBits));
+                // Pad only the high bits of the last word that do not cover real pages.
+                // When the page count is a multiple of 64 the last word holds only real pages.
+                if (remainingBits != 0)
+                    _validPagesAfterLoad[^1] |= unchecked(((long)ulong.MaxValue << (int)remainingBits));
 
                 _decompressionBuffers = new DecompressionBuffersPool(options);
 
@@ -288,7 +296,7 @@ namespace Voron
             var header = stackalloc TransactionHeader[1];
 
             Options.AddToInitLog?.Invoke(LogMode.Information, "Starting Recovery");
-            bool hadIntegrityIssues = _journal.RecoverDatabase(header, Options.AddToInitLog);
+            bool hadIntegrityIssues = _journal.RecoverDatabase(header, Options.AddToInitLog, out var skippedInvalidJournals);
             var successString = hadIntegrityIssues ? "(with integrity issues)" : "(successfully)";
             Options.AddToInitLog?.Invoke(LogMode.Information, $"Recovery Ended {successString}");
 
@@ -301,6 +309,14 @@ namespace Voron
 
             var entry = _headerAccessor.CopyHeader();
             var nextPageNumber = (header->TransactionId == 0 ? entry.LastPageNumber : header->LastPageNumber) + 1;
+
+            if (skippedInvalidJournals)
+            {
+                Debug.Assert(Options.IgnoreInvalidJournalErrors == true, "Options.IgnoreInvalidJournalErrors == true");
+
+                nextPageNumber = Math.Max(nextPageNumber, _dataPager.NumberOfAllocatedPages);
+            }
+
             State = new StorageEnvironmentState(nextPageNumber);
 
             Interlocked.Exchange(ref _transactionsCounter, header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
@@ -483,11 +499,10 @@ namespace Voron
 
         public void Dispose()
         {
-
             if (_envDispose.IsSet)
                 return; // already disposed
 
-            _cancellationTokenSource.Cancel();
+            _cancellationTokenSource.SafeCancel(_log, $"Disposing {Options}");
             try
             {
                 SelfReference.Owner = null;

@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -586,8 +587,11 @@ namespace Raven.Server.Commercial
             }
         }
 
-        internal static async Task ValidateServerCanRunWithSuppliedSettings(SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode, CancellationToken token)
+        private static async Task ValidateServerCanRunWithSuppliedSettings(SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode, CancellationToken token)
         {
+            if (setupInfo.ZipOnly)
+                return;
+
             var localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
             var localIps = new List<IPEndPoint>();
 
@@ -939,12 +943,19 @@ namespace Raven.Server.Commercial
                 onProgress(progress);
             }
 
-            var certPath = serverStore.Configuration.GetSetting(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath)) ?? Path.Combine(AppContext.BaseDirectory, certificateFileName);
+            settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath), out string setupResultingCertPath);
+
+            var certPath = setupResultingCertPath
+                           ?? serverStore.Configuration.GetSetting(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath))
+                           ?? Path.Combine(AppContext.BaseDirectory, certificateFileName);
 
             try
             {
                 progress.AddInfo($"Saving server certificate at {certPath}.");
                 onProgress(progress);
+
+                var certDirectory = Path.GetDirectoryName(certPath);
+                IOExtensions.CreateDirectory(certDirectory);
 
                 await using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
                 {
@@ -957,6 +968,12 @@ namespace Raven.Server.Commercial
                 {
                     PosixHelper.EnsureRWPermissionsForOwnerAndGroup(certPath);
                 }
+            }
+            catch (Exception e) when (e is UnauthorizedAccessException or SecurityException)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to save server certificate at '{certPath}'. The RavenDB process does not have the required permissions to write to this location. " +
+                    $"Either grant the process write access to the target directory or choose a different certificate path.", e);
             }
             catch (Exception e)
             {
@@ -1152,16 +1169,16 @@ namespace Raven.Server.Commercial
                         throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
                     }
 
-                    if (unsecuredSetupInfo.LocalNodeTag != null)
+                    if (unsecuredSetupInfo.StartAsPassive == false)
                     {
                         await serverStore.EnsureNotPassiveAsync(publicServerUrl, unsecuredSetupInfo.LocalNodeTag);
-                        
+
+                        await DeleteAllExistingCertificates(serverStore);
+
                         if (unsecuredSetupInfo.License != null)
                             await serverStore.LicenseManager.ActivateAsync(unsecuredSetupInfo.License, RaftIdGenerator.DontCareId);
                     }
 
-                    await DeleteAllExistingCertificates(serverStore);
-                    
                     serverStore.HasFixedPort = unsecuredSetupInfo.NodeSetupInfos[localNodeTag].Port != 0;
                 },
                 AddNodeToCluster = async nodeTag =>
@@ -1220,13 +1237,16 @@ namespace Raven.Server.Commercial
                         throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
                     }
 
-                    await serverStore.EnsureNotPassiveAsync(publicServerUrl, setupInfo.LocalNodeTag);
+                    if (setupInfo.StartAsPassive == false)
+                    {
+                        await serverStore.EnsureNotPassiveAsync(publicServerUrl, setupInfo.LocalNodeTag);
 
-                    await DeleteAllExistingCertificates(serverStore);
-                    
-                    await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
-                    if (setupInfo.License != null)
-                        await serverStore.LicenseManager.ActivateAsync(setupInfo.License, RaftIdGenerator.DontCareId);
+                        await DeleteAllExistingCertificates(serverStore);
+
+                        await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
+                        if (setupInfo.License != null)
+                            await serverStore.LicenseManager.ActivateAsync(setupInfo.License, RaftIdGenerator.DontCareId);
+                    }
 
                     serverStore.HasFixedPort = setupInfo.NodeSetupInfos[localNodeTag].Port != 0;
                 },

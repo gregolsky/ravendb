@@ -309,13 +309,16 @@ namespace Raven.Server.ServerWide.Commands
                 throw new InvalidOperationException($"Cannot use '{nameof(ClusterTransactionCommand)}' with a sharded database ('{databaseName}').");
         }
 
-        internal static void ValidateCommands(ArraySegment<BatchRequestParser.CommandData> parsedCommands, bool disableAtomicDocumentWrites)
+        internal static void ValidateCommands(ArraySegment<BatchRequestParser.CommandData> parsedCommands, bool disableAtomicDocumentWrites, bool disallowControlCharacters)
         {
             foreach (var document in parsedCommands)
             {
                 switch (document.Type)
                 {
                     case CommandType.CompareExchangePUT:
+                        if (disallowControlCharacters)
+                            DocumentIdWorker.CheckAndThrowContainsControlCharacters(document.Id, "Compare Exchange Key");
+                        goto case CommandType.CompareExchangeDELETE;
                     case CommandType.CompareExchangeDELETE:
                         if (disableAtomicDocumentWrites == false)
                         {
@@ -324,6 +327,9 @@ namespace Raven.Server.ServerWide.Commands
                         }
                         break;
                     case CommandType.PUT:
+                        if (disallowControlCharacters)
+                            DocumentIdWorker.CheckAndThrowContainsControlCharacters(document.Id, "Document ID");
+                        
                         if (document.SeenAttachments)
                             throw new NotSupportedException($"The document {document.Id} has attachments, this is not supported in cluster wide transaction.");
 
@@ -757,6 +763,19 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
+        public static unsafe long? ReadFirstClusterTransactionPreviousCount(ClusterOperationContext context, string database)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
+            using (GetPrefix(context, database, out var prefixSlice))
+            {
+                if (items.SeekOnePrimaryKeyPrefix(prefixSlice, out var reader) == false)
+                    return null;
+
+                var keyPtr = reader.Read((int)TransactionCommandsColumn.Key, out var size);
+                return Bits.SwapBytes(*(long*)(keyPtr + size - sizeof(long)));
+            }
+        }
+
         public const byte Separator = 30;
 
         public static unsafe bool DeleteCommands<TTransaction>(TransactionOperationContext<TTransaction> context, string database, long upToCommandCount)
@@ -815,6 +834,18 @@ namespace Raven.Server.ServerWide.Commands
                 scope.Dispose();
                 throw;
             }
+        }
+
+        // 'startAfter' is exclusive, so we seek after (fromCount - 1) to include the command at exactly 'fromCount' (counts are discrete).
+        // For fromCount null/0 there is nothing to skip: return an empty slice (seek from the database start) and a no-op scope.
+        private static ByteStringContext.InternalScope GetStartAfterPrefix<TTransaction>(TransactionOperationContext<TTransaction> context, string database, long? fromCount, out Slice startAfter)
+            where TTransaction : RavenTransaction
+        {
+            if (fromCount is > 0)
+                return GetPrefix(context, database, out startAfter, fromCount.Value - 1);
+
+            startAfter = Slices.Empty;
+            return default;
         }
 
         public sealed class SingleClusterDatabaseCommand : IDynamicJson, IDisposable
@@ -883,19 +914,24 @@ namespace Raven.Server.ServerWide.Commands
         {
             var lowerDb = database.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
-            using (GetPrefix(context, database, out Slice prefixSlice, fromCount))
+
+            using (GetPrefix(context, database, out Slice databasePrefix))
+            using (GetStartAfterPrefix(context, database, fromCount, out var startAfter))
             {
                 var readSize = 0;
-                var commandsBulk = items.SeekByPrimaryKey(prefixSlice, 0);
+                var commandsBulk = items.SeekByPrimaryKeyPrefix(databasePrefix, startAfter, 0);
                 foreach (var command in commandsBulk)
                 {
                     if (take <= 0)
                         yield break;
 
-                    var reader = command.Reader;
+                    var reader = command.Value.Reader;
                     var result = ReadCommand(context, reader);
                     if (result == null)
                         yield break;
+
+                    Debug.Assert(result.Database == lowerDb);
+                    Debug.Assert(fromCount == null || result.PreviousCount >= fromCount);
 
                     if (result.Database != lowerDb)
                     {
@@ -920,7 +956,7 @@ namespace Raven.Server.ServerWide.Commands
                     yield return result;
 
                     readSize += reader.Size;
-                    if(readSize > maxBytesToRead)
+                    if (readSize > maxBytesToRead)
                         yield break;
                 }
             }

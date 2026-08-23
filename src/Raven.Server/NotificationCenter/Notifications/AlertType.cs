@@ -51,6 +51,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         ClusterTopologyWarning,
         DatabaseTopologyWarning,
         SwappingHddInsteadOfSsd,
+        HighReadAheadKb,
 
         RevisionsConfigurationNotValid,
         ArchivalConfigurationNotValid,
@@ -97,5 +98,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         SqlConnectionString_DeprecatedFactoryReplaced,
 
         GcThreadContention,
+
+        DatabaseEventExecFailure,
     }
 }

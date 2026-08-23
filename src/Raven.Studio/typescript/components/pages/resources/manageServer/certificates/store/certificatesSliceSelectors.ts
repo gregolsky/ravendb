@@ -7,6 +7,7 @@ import {
 } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { certificatesUtils } from "components/pages/resources/manageServer/certificates/utils/certificatesUtils";
 import { RootState } from "components/store";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 const selectClearanceFilterOptions = createSelector(
     (state: RootState) => state.certificates.certificates,
@@ -48,6 +49,8 @@ const selectStateFilterOptions = createSelector(
             }
             if (state === "About to expire") {
                 aboutToExpireCount++;
+                // About to expire certificates are still valid
+                validCount++;
             }
             if (state === "Expired") {
                 expiredCount++;
@@ -80,7 +83,11 @@ const selectFilteredCertificates = createSelector(
             }
 
             const permissionKeys = Object.keys(cert.Permissions);
-            if (databaseFilter && permissionKeys.length > 0 && !permissionKeys.includes(databaseFilter)) {
+            if (
+                databaseFilter &&
+                permissionKeys.length > 0 &&
+                !permissionKeys.some((x) => DatabaseUtils.namesEqualIgnoreCase(x, databaseFilter))
+            ) {
                 return false;
             }
 
@@ -91,7 +98,12 @@ const selectFilteredCertificates = createSelector(
                 return false;
             }
 
-            if (stateFilter.length > 0 && !stateFilter.includes(certificatesUtils.getState(cert.NotAfter))) {
+            const state = certificatesUtils.getState(cert.NotAfter);
+            if (stateFilter.includes("Valid") && (state === "Valid" || state === "About to expire")) {
+                return true;
+            }
+
+            if (stateFilter.length > 0 && !stateFilter.includes(state)) {
                 return false;
             }
 
@@ -151,4 +163,5 @@ export const certificatesSelectors = {
     certificateToEdit: (state: RootState) => state.certificates.certificateToEdit,
     certificateToClone: (state: RootState) => state.certificates.certificateToClone,
     isReplaceServerModalOpen: (state: RootState) => state.certificates.isReplaceServerModalOpen,
+    isRenewedModalOpen: (state: RootState) => state.certificates.isRenewedModalOpen,
 };

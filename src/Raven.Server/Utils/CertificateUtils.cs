@@ -44,14 +44,22 @@ namespace Raven.Server.Utils
             X509Certificate2 issuerCertificate = null;
 
             var userChain = new X509Chain();
+            var knownCertChain = new X509Chain();
+
+            if (PlatformDetails.RunningOnMacOsx)
+            {
+                using (var store = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser))
+                {
+                    store.Open(OpenFlags.ReadOnly);
+                    userChain.ChainPolicy.ExtraStore.AddRange(store.Certificates);
+                    knownCertChain.ChainPolicy.ExtraStore.AddRange(store.Certificates);
+                }
+            }
+
             // we are not disabling certificate downloads because this method is checking public key pinning hashes
             // in order to do that properly it needs to be able to verify the chain by download the certificates
             // userChain.ChainPolicy.DisableCertificateDownloads = true;
-
-            var knownCertChain = new X509Chain();
-            // we are not disabling certificate downloads because this method is checking public key pinning hashes
-            // in order to do that properly it needs to be able to verify the chain by download the certificates
-            //knownCertChain.ChainPolicy.DisableCertificateDownloads = true;
+            // knownCertChain.ChainPolicy.DisableCertificateDownloads = true;
 
             explanations?.Add($"Try building client certificate chain - {userCertificate.GetDisplayName()}.");
             try
@@ -522,7 +530,7 @@ namespace Raven.Server.Utils
 
             // Return a new X509Certificate2 object from the generated PFX byte array.
             var flags = X509KeyStorageFlags.PersistKeySet;
-            return new X509Certificate2(clientCertBytes, string.Empty, flags);
+            return new X509Certificate2(clientCertBytes, (string)null, flags);
         }
 
         public static X509Certificate2 ExtractServerCertificateFromExtension(X509Certificate2 clientCert)
@@ -760,9 +768,29 @@ namespace Raven.Server.Utils
 
         public static X509Certificate2 BuildNewPfx(SetupInfo setupInfo, X509Certificate2 certificate, AsymmetricAlgorithm privateKey)
         {
-            // Combine the main certificate and the private key.
-            var certificateWithPrivateKey = certificate.CopyWithPrivateKey((RSA)privateKey);
+            X509Certificate2 safeCertificate = certificate;
 
+            if (PlatformDetails.RunningOnMacOsx)
+            {
+                // Stripping the keychain context by exporting to raw public bytes (CER) and re-importing
+                // prevents the AppleCrypto crash during CopyWithPrivateKey.
+                byte[] rawPublicBytes = certificate.Export(X509ContentType.Cert);
+                safeCertificate = new X509Certificate2(rawPublicBytes);
+            }
+
+            // Combine the main certificate and the private key safely for both RSA and ECDSA.
+            X509Certificate2 certificateWithPrivateKey;
+            if (privateKey is RSA rsa)
+                certificateWithPrivateKey = safeCertificate.CopyWithPrivateKey(rsa);
+            else if (privateKey is ECDsa ecdsa)
+                certificateWithPrivateKey = safeCertificate.CopyWithPrivateKey(ecdsa);
+            else
+                throw new NotSupportedException($"Unsupported key type: {privateKey.GetType().Name}");
+            
+            if (PlatformDetails.RunningOnMacOsx)
+            {
+                safeCertificate.Dispose();
+            }
             // Build the complete certificate chain.
             using var chain = new X509Chain();
             chain.ChainPolicy.DisableCertificateDownloads = true;

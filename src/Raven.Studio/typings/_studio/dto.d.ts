@@ -66,6 +66,13 @@ interface changeVectorItem {
     shortFormat: string;
 }
 
+interface changeVectorEntryItem {
+    tag: string;
+    etag: string;
+    dbId: string;
+    original: string;
+}
+
 interface IndexErrorPerDocument {
     Document: string;
     Error: string;
@@ -392,6 +399,7 @@ declare module studio.settings {
     type numberFormatting = "raw" | "formatted";
     type dontShowAgain = "UnsupportedBrowser";
     type saveLocation = "local" | "remote";
+    type ongoingTaskDisplayMode = "expanded" | "compact";
 }
 
 interface IndexingPerformanceStatsWithCache extends Raven.Client.Documents.Indexes.IndexingPerformanceStats {
@@ -652,6 +660,7 @@ interface explainQueryResponse extends resultsDto<Raven.Server.Documents.Queries
 
 interface virtualBulkOperationItem {
     id: string;
+    operationId: number;
     date: string;
     duration: number;
     totalItemsProcessed: number;
@@ -663,6 +672,7 @@ interface virtualBulkOperationItem {
 
 interface virtualBulkOperationFailureItem {
     id: string;
+    operationId: number;
     date: string;
     duration: number;
     errorMsg: string;
@@ -1052,7 +1062,7 @@ interface ReactLocationProps {
 
 interface ReactInKnockoutOptions<T> {
     component: T;
-    props?: Parameters<typeof T>[0];
+    props?: Parameters<T>[0];
     dirtyFlag?: ReactDirtyFlag;
 }
 

@@ -114,12 +114,14 @@ function GetWindowsImageTags($repo, $version, $WinVer, [bool]$useVersionTagsOnly
 
 function GetManifestTags {
     param (
-        $repo
+        $repo,
+        $version
     )
 
     return @(
         #"${repo}:latest-lts",
-        "${repo}:6.2-latest"
+        "${repo}:6.2-latest",
+        "${repo}:${version}"
     )
 }
 
@@ -132,7 +134,6 @@ function GetImageTagsForManifest {
         "${repo}:6.2-ubuntu-latest",
         "${repo}:6.2-ubuntu-arm32v7-latest",
         "${repo}:6.2-ubuntu-arm64v8-latest",
-        "${repo}:6.2-windows-1809-latest",
         "${repo}:6.2-windows-ltsc2022-latest"
     )
 }

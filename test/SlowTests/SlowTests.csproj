@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.25</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.30</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>SlowTests</AssemblyName>
     <PackageId>SlowTests</PackageId>
@@ -58,6 +58,7 @@
     <None Remove="Data\RavenDB_24415\Can_push_via_filtered_replication_2.0-5.zip" />
     <None Remove="Data\RavenDB_24797\24797_counters_test.ravendb-snapshot" />
     <None Remove="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
+    <None Remove="Smuggler\Data\Legacy-Raven-Expiration-Date.ravendbdump" />
     <None Remove="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
@@ -119,6 +120,8 @@
     <EmbeddedResource Include="Data\RavenDB_22703\RavenDB_22703.ravendb-snapshot" />
     <None Remove="Data\RavenDB_22937\RavenDB_22937.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_22937\RavenDB_22937.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_27171\RavenDB_27171.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_27171\RavenDB_27171.ravendb-snapshot" />
     <None Remove="Data\RavenDB-23409.rec" />
     <EmbeddedResource Include="Data\RavenDB-23409.rec" />
     <None Remove="Data\RavenDB_24281\RavenDB-24281.ravendb-snapshot" />
@@ -134,8 +137,18 @@
     <EmbeddedResource Include="Data\RavenDB_25033\RavenDB_25033_RDBC_128.txt" />
     <None Remove="Data\RavenDB_25136\RavenDB_25136.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_25136\RavenDB_25136.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_25738\ControlChars.ravendb-full-backup" />
+    <EmbeddedResource Include="Data\RavenDB_25738\ControlChars.ravendb-full-backup" />
+    <None Remove="Data\RavenDB_25738\ControlChars.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_25738\ControlChars.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_25738\Dump.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_25738\Dump.ravendbdump" />
     <None Remove="Data\RavenDB-24529\RavenDB_24529.replay" />
     <EmbeddedResource Include="Data\RavenDB_24529\RavenDB_24529.replay" />
+    <None Remove="Data\RavenDB-24423\PreRavenDB_24423.gz" />
+    <EmbeddedResource Include="Data\RavenDB_24423\PreRavenDB_24423.gz" />
+    <None Remove="Data\RavenDB_24423\PreRavenDB_24423.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_24423\PreRavenDB_24423.ravendb-snapshot" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />
@@ -194,6 +207,7 @@
     <EmbeddedResource Include="Smuggler\Data\Document_Without_Attachment_Stream.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Identities_3.5.35288.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Indexes_And_Transformers_3.5.ravendbdump" />
+    <EmbeddedResource Include="Smuggler\Data\Legacy-Raven-Expiration-Date.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Northwind_3.5.35168.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Revisions_3.5.35220.ravendbdump" />

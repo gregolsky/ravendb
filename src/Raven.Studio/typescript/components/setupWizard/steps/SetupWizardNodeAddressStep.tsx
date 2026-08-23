@@ -326,7 +326,6 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
             dnsName: securityOption === "ownCertificate" ? formData.dnsName : null,
             nodeUrl: handleNodeUrl(formData),
             httpPort: formData.httpPort == null ? (securityOption === "none" ? 8080 : 443) : formData.httpPort,
-            nodeTag: formData.isPassive ? null : formData.nodeTag,
             isEditing: false,
             isNewlyAdded: false,
         });
@@ -359,7 +358,7 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
         }
     };
 
-    const isPassiveVisible = securityOption === "none" && method !== "createPackage" && nodes.length === 1;
+    const isPassiveVisible = method !== "createPackage" && nodes.length === 1;
 
     return (
         <RichPanelHeader>
@@ -464,7 +463,7 @@ function NodeDetailsPanelView({ index, control }: NodeDetailsPanelViewProps) {
                             message={
                                 <SetupWizardInfoPopover
                                     description="Defines the address under which specific node will be available."
-                                    docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
+                                    ravenLinkHash="MGIZZM"
                                 />
                             }
                         >
@@ -486,7 +485,7 @@ function NodeDetailsPanelView({ index, control }: NodeDetailsPanelViewProps) {
                                 message={
                                     <SetupWizardInfoPopover
                                         description="Defines the address under which specific node will be available."
-                                        docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
+                                        ravenLinkHash="MGIZZM"
                                     />
                                 }
                             >
@@ -510,7 +509,7 @@ function NodeDetailsPanelView({ index, control }: NodeDetailsPanelViewProps) {
                             message={
                                 <SetupWizardInfoPopover
                                     description={`Defines the communication endpoint for clients and browsers. By default, this value is set to ${setupWizardData.securityStep.securityOption === "none" ? "8080" : "443"}.`}
-                                    docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
+                                    ravenLinkHash="MGIZZM"
                                 />
                             }
                         >
@@ -532,7 +531,7 @@ function NodeDetailsPanelView({ index, control }: NodeDetailsPanelViewProps) {
                             message={
                                 <SetupWizardInfoPopover
                                     description="Defines the TCP endpoint for cluster nodes to communicate with each other. By default, this value is set to 38888."
-                                    docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurltcp"
+                                    ravenLinkHash="9D6HG1"
                                 />
                             }
                         >
@@ -554,7 +553,7 @@ function NodeDetailsPanelView({ index, control }: NodeDetailsPanelViewProps) {
                             message={
                                 <SetupWizardInfoPopover
                                     description="Defines the network endpoint where the server is accessible."
-                                    docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
+                                    ravenLinkHash="MGIZZM"
                                 />
                             }
                         >
@@ -597,7 +596,7 @@ function NodeDetailsPanelEdit({
     const { isExternalRequired } = useHostnameDetectionSideEffects({ editNodeForm, parentControl });
 
     const isDNSVisible = securityOption === "ownCertificate" && !isWildcardCertificate;
-    const isPassiveVisible = securityOption === "none" && setupMethod !== "createPackage" && nodes.length === 1;
+    const isPassiveVisible = setupMethod !== "createPackage" && nodes.length === 1;
 
     const canCustomizeExternalIpsAndPorts = securityOption === "letsEncrypt";
     const canCustomizeExternalTcpPorts = securityOption === "ownCertificate";
@@ -619,10 +618,11 @@ function NodeDetailsPanelEdit({
                                 <PopoverWithHoverWrapper
                                     message={
                                         <SetupWizardInfoPopover
-                                            description="When enabled, the node starts in passive mode and does not join a cluster. 
-                                                This is useful when the node is meant for monitoring, initialization, or handling setup tasks without participating in cluster operations. 
-                                                It can also be used to isolate the node for testing or debugging."
-                                            docsLink="https://docs.ravendb.net/server/clustering/rachis/cluster-topology#state"
+                                            description="When enabled, the node starts in passive mode and does not join a cluster.
+                                                This is useful when the node is meant for monitoring, initialization, or handling setup tasks without participating in cluster operations.
+                                                It can also be used to isolate the node for testing or debugging.
+                                                The node will leave passive state when a cluster operation is performed on it, such as creating a database or adding it to a cluster."
+                                            ravenLinkHash="2WV7N1"
                                         />
                                     }
                                 >
@@ -646,7 +646,7 @@ function NodeDetailsPanelEdit({
                                                     Node tag can contain a maximum of 4 uppercase letters (A-Z).
                                                 </RichAlert>
                                             }
-                                            docsLink="https://docs.ravendb.net/glossary/node-tag"
+                                            ravenLinkHash="WJJHFY"
                                         />
                                     }
                                 >
@@ -704,7 +704,7 @@ function NodeDetailsPanelEdit({
                                     message={
                                         <SetupWizardInfoPopover
                                             description={`Defines the private ${securityOption === "none" ? "HTTP" : "HTTPS"} port used by clients and browsers. By default, this value is set to ${securityOption === "none" ? "8080" : "443"}.`}
-                                            docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
+                                            ravenLinkHash="MGIZZM"
                                         />
                                     }
                                 >
@@ -728,7 +728,7 @@ function NodeDetailsPanelEdit({
                                         <SetupWizardInfoPopover
                                             description="Defines the TCP port used for internal communication between cluster nodes.
                                                 By default, this value is set to 38888."
-                                            docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurltcp"
+                                            ravenLinkHash="9D6HG1"
                                         />
                                     }
                                 >
@@ -782,7 +782,7 @@ function NodeDetailsPanelEdit({
                                     <SetupWizardInfoPopover
                                         description="External overrides allow you to specify an alternative IP address, hostname, 
                                             or HTTPS port that clients will use instead of the server’s default settings."
-                                        docsLink="https://docs.ravendb.net/server/configuration/core-configuration#publicserverurl"
+                                        ravenLinkHash="Z112DU"
                                     />
                                 }
                             >
@@ -826,7 +826,7 @@ function EditFormExternalAddressInputs({
                                     <SetupWizardInfoPopover
                                         description="Defines the public IP address from which requests will be
                                             forwarded to the private IP address that RavenDB listens on."
-                                        docsLink="https://docs.ravendb.net/server/configuration/core-configuration#publicserverurl"
+                                        ravenLinkHash="Z112DU"
                                     />
                                 }
                             >
@@ -853,7 +853,7 @@ function EditFormExternalAddressInputs({
                                         <SetupWizardInfoPopover
                                             description="Defines the public HTTPS port that clients and browsers will use
                                                 instead of the default binding."
-                                            docsLink="https://docs.ravendb.net/server/configuration/core-configuration#publicserverurl"
+                                            ravenLinkHash="Z112DU"
                                         />
                                     }
                                 >
@@ -882,7 +882,7 @@ function EditFormExternalAddressInputs({
                                         <SetupWizardInfoPopover
                                             description="Defines the public TCP port used for inter-node communication
                                                 and client connections."
-                                            docsLink="https://docs.ravendb.net/server/configuration/core-configuration#publicserverurl"
+                                            ravenLinkHash="Z112DU"
                                         />
                                     }
                                 >
@@ -1113,7 +1113,7 @@ function IpAddressList({
                             message={
                                 <SetupWizardInfoPopover
                                     description="Defines the IP address or hostname used to access the server."
-                                    docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
+                                    ravenLinkHash="MGIZZM"
                                 />
                             }
                         >

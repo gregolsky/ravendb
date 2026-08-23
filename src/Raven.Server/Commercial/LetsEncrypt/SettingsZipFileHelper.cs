@@ -116,13 +116,11 @@ public static class SettingsZipFileHelper
                 settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.SetupMode)] = parameters.SetupMode.ToString();
 
                 if (parameters.SetupInfo.EnableExperimentalFeatures)
-                {
-                    settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
-                }
+                    AddExperimentalFeaturesToSettingsJson(settingsJson);
                 
                 ModifySettingsJson(parameters.SetupInfo, parameters.Progress.SetupActionSteps, ref settingsJson);
 
-                if (parameters.SetupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
+                if (parameters.SetupInfo.Environment != StudioConfiguration.StudioEnvironment.None && parameters.SetupInfo.StartAsPassive == false)
                 {
                     if (parameters.OnPutServerWideStudioConfigurationValues != null && parameters.ZipOnly == false)
                         await parameters.OnPutServerWideStudioConfigurationValues(parameters.SetupInfo.Environment);
@@ -148,6 +146,10 @@ public static class SettingsZipFileHelper
                 settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certPath ?? certificateFileName;
                 if (string.IsNullOrEmpty(parameters.SetupInfo.Password) == false)
                     settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePassword)] = parameters.SetupInfo.Password;
+                
+                if (parameters.SetupInfo.StartAsPassive && parameters.CompleteClusterConfigurationResult.ClientCert != null)
+                    settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.WellKnownAdminCertificates)] =
+                        parameters.CompleteClusterConfigurationResult.ClientCert.Thumbprint;
 
                 foreach (var node in parameters.SetupInfo.NodeSetupInfos)
                 {
@@ -330,13 +332,11 @@ public static class SettingsZipFileHelper
                 };
 
                 if (parameters.UnsecuredSetupInfo.EnableExperimentalFeatures)
-                {
-                    settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
-                }
+                    AddExperimentalFeaturesToSettingsJson(settingsJson);
                 
                 ModifySettingsJson(parameters.UnsecuredSetupInfo, parameters.Progress.SetupActionSteps, ref settingsJson);
 
-                if (parameters.UnsecuredSetupInfo.Environment != StudioConfiguration.StudioEnvironment.None && parameters.ZipOnly == false)
+                if (parameters.UnsecuredSetupInfo.Environment != StudioConfiguration.StudioEnvironment.None && parameters.ZipOnly == false && parameters.UnsecuredSetupInfo.StartAsPassive == false)
                 {
                     if (parameters.OnPutServerWideStudioConfigurationValues != null)
                         await parameters.OnPutServerWideStudioConfigurationValues(parameters.UnsecuredSetupInfo.Environment);
@@ -363,8 +363,7 @@ public static class SettingsZipFileHelper
                     var modifiedJsonObj = context.ReadObject(currentNodeSettingsJson, "modified-settings-json");
 
                     var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
-                    var firstNodeTag = parameters.UnsecuredSetupInfo.NodeSetupInfos.Keys.First();
-                    if ((node.Key == parameters.UnsecuredSetupInfo.LocalNodeTag || node.Key == firstNodeTag) && parameters.UnsecuredSetupInfo.ZipOnly == false)
+                    if (node.Key == parameters.UnsecuredSetupInfo.LocalNodeTag && parameters.UnsecuredSetupInfo.ZipOnly == false)
                     {
                         try
                         {
@@ -750,4 +749,11 @@ public static class SettingsZipFileHelper
         return url;
     }
 
+    private static void AddExperimentalFeaturesToSettingsJson(BlittableJsonReaderObject settingsJson)
+    {
+        settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
+#if !RVN
+        settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Enabled)] = true;
+#endif
+    }
 }

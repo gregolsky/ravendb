@@ -197,6 +197,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public string WhoseTaskIsIt(long taskId)
         {
+            Debug.Assert(_disposed == false, "PeriodicBackupRunner is already disposed");
+
             if (_periodicBackups.TryGetValue(taskId, out var periodicBackup) == false)
             {
                 throw new InvalidOperationException($"Backup task id: {taskId} doesn't exist");
@@ -487,10 +489,10 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             catch (Exception e) when (e.ExtractSingleInnerException() is OperationCanceledException oce)
             {
-                if (_periodicBackups.TryGetValue(periodicBackup.BackupStatus.TaskId, out PeriodicBackup inMemoryBackupStatus))
+                if (_periodicBackups.TryGetValue(periodicBackup.Configuration.TaskId, out PeriodicBackup inMemoryBackupStatus))
                 {
-                    runningBackupStatus.DelayUntil = inMemoryBackupStatus.BackupStatus.DelayUntil;
-                    runningBackupStatus.OriginalBackupTime = inMemoryBackupStatus.BackupStatus.OriginalBackupTime;
+                    runningBackupStatus.DelayUntil = inMemoryBackupStatus.BackupStatus?.DelayUntil;
+                    runningBackupStatus.OriginalBackupTime = inMemoryBackupStatus.BackupStatus?.OriginalBackupTime;
                 }
 
                 if (_logger.IsOperationsEnabled)

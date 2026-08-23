@@ -11,6 +11,7 @@ using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Collections;
 using Sparrow.Threading;
@@ -21,6 +22,8 @@ namespace Raven.Server.Documents.Changes;
 public abstract class AbstractChangesClientConnection<TOperationContext> : ILowMemoryHandler, IDisposable
     where TOperationContext : JsonOperationContext
 {
+    private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Client", typeof(AbstractChangesClientConnection<TOperationContext>).FullName);
+
     private readonly WebSocket _webSocket;
     private readonly AsyncQueue<SendQueueItem> _sendQueue = new();
 
@@ -322,8 +325,11 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
 
     public virtual void Dispose()
     {
-        _isDisposed.Raise();
-        _cts.Cancel();
+        if (_isDisposed.Raise() == false)
+            return;
+
+        _cts.SafeCancel(Logger, "changes client connection");
+
         _sendQueue.Enqueue(new SendQueueItem
         {
             AllowSkip = false,

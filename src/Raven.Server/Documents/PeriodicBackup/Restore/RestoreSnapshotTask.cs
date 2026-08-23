@@ -46,8 +46,20 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             _extension = extension;
         }
 
+        protected override Task<IDisposable> OnBeforeRestoreAsync()
+        {
+            // the per-database cluster transaction command counter is rebuilt from the restored compare-exchange
+            // (atomic guard) values on the fresh cluster. A snapshot backup carries over the source's
+            // TruncatedClusterTransactionCommandsCount, which can be higher than that rebuilt counter and would then
+            // block cleanup of the new commands. Reset it so cleanup is driven purely by the rebuilt counter.
+            RestoreSettings.DatabaseRecord.TruncatedClusterTransactionCommandsCount = 0;
+            return base.OnBeforeRestoreAsync();
+        }
+
         protected override async Task RestoreAsync()
         {
+            Database.DocumentsStorage.ResetLastCompletedClusterTransactionIndex();
+
             await RestoreFromSmugglerFileAsync(Progress, Database, _firstFile, Context, RestoreConfiguration.MaxReadOpsPerSecond);
             await HandleSubscriptionFromSnapshot(FilesToRestore, RestoreSettings.Subscriptions, DatabaseName, Database);
             await SmugglerRestoreAsync(Database, Context, Database.Smuggler.CreateDestinationForSnapshotRestore(RestoreSettings.Subscriptions));

@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Revisions;
@@ -65,13 +66,21 @@ namespace SlowTests.Issues
                 Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisionsMetadata2[0].GetString(Constants.Documents.Metadata.Flags));
             }
 
-            var dbName = store.Database;
-            if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+            DocumentDatabase database;
+            switch (options.DatabaseMode)
             {
-                var shardNumber = await Sharding.GetShardNumberForAsync(store, user1.Id);
-                dbName = ShardHelper.ToShardName(store.Database, shardNumber);
+                case RavenDatabaseMode.Single:
+                    database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                    break;
+                case RavenDatabaseMode.Sharded:
+                    var shardNumber = await Sharding.GetShardNumberForAsync(store, user1.Id);
+                    var dbName = ShardHelper.ToShardName(store.Database, shardNumber);
+                    database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(dbName);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+
             }
-            var database = await Databases.GetDocumentDatabaseInstanceFor(store, dbName);
 
             // Delete the last revision (the 'Delete Revision')
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -99,7 +108,7 @@ namespace SlowTests.Issues
 
             // Run AdoptOrphaned and assert that new 'Delete Revision' was created again for user1
             var token = new OperationCancelToken(database.Configuration.Databases.OperationTimeout.AsTimeSpan, database.DatabaseShutdown);
-            await database.DocumentsStorage.RevisionsStorage.AdoptOrphanedAsync(null, token);
+            await database.DocumentsStorage.RevisionsStorage.AdoptOrphanedAsync(onProgress: null, new AdoptOrphanedRevisionsOperation.Parameters(), token);
             using (var session = store.OpenAsyncSession())
             {
                 var user1RevCount = await session.Advanced.Revisions.GetCountForAsync(user1.Id);

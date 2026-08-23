@@ -32,6 +32,8 @@ namespace SlowTests.Issues
             var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true);
             var databaseName = await Encryption.EncryptedClusterAsync(nodes, certificates);
 
+            var nonLeaderTags = nodes.Where(n => n != leader).Select(n => n.ServerStore.NodeTag).ToList();
+
             var options = new Options
             {
                 Server = leader,
@@ -40,7 +42,12 @@ namespace SlowTests.Issues
                 AdminCertificate = certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = _ => databaseName,
                 Encrypted = true,
-                RunInMemory = false
+                RunInMemory = false,
+                ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology
+                {
+                    Members = nonLeaderTags,
+                    ReplicationFactor = 2
+                }
             };
             using (var store = GetDocumentStore(options))
             {
@@ -108,6 +115,14 @@ namespace SlowTests.Issues
                 await Assert.ThrowsAsync<RavenException>(() => AddNodeToGroup(store));
 
                 await DeleteNodeFromGroup(store, notInDbGroupServer);
+
+                // wait for the failed database instance to be fully unloaded on the target node
+                // (its DisposeInternal may still be running in a background task, holding the db.lock)
+                var isLoaded = await WaitForValueAsync(() =>
+                {
+                    return notInDbGroupServer.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out _);
+                }, false, timeout: 30_000);
+                Assert.False(isLoaded, $"Database '{databaseName}' is still loaded on node '{notInDbGroupServer.ServerStore.NodeTag}' after waiting for it to unload.");
 
                 notInDbGroupServer.ServerStore.PutSecretKey(copy, databaseName, overwrite: true);
                 await AddNodeToGroup(store);

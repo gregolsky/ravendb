@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -776,7 +776,26 @@ namespace Voron
 
                 foreach (var file in Directory.GetFiles(TempPath.FullPath).Where(x => x.EndsWith(BuffersFileExtension, StringComparison.OrdinalIgnoreCase) || x.EndsWith(TempFileExtension, StringComparison.OrdinalIgnoreCase)))
                 {
-                    File.Delete(file);
+                    DeleteTempFile(file);
+                }
+            }
+
+            private static void DeleteTempFile(string file)
+            {
+                const int retries = 5;
+                for (int i = 0; i < retries; i++)
+                {
+                    try
+                    {
+                        File.Delete(file);
+                        return;
+                    }
+                    catch (Exception e) when (i < retries - 1 && e is UnauthorizedAccessException or IOException)
+                    {
+                        // On Windows, memory-mapped file handles may not be fully released by
+                        // the kernel yet even after the pager is disposed. Retry after a brief delay.
+                        Thread.Sleep(50);
+                    }
                 }
             }
 
@@ -907,7 +926,11 @@ namespace Voron
                 {
                     if (RunningOn32Bits)
                         return new Posix32BitsMemoryMapPager(this, path);
-                    return new RvnMemoryMapPager(this, path);
+
+                    var posixJournalPager = new RvnMemoryMapPager(this, path);
+                    if (UseSequentialReadAheadHintForJournalRecovery)
+                        posixJournalPager.TrySetSequentialScanHint();
+                    return posixJournalPager;
                 }
 
                 if (RunningOn32Bits)
@@ -1257,6 +1280,7 @@ namespace Voron
 
         public int MaxNumberOfRecyclableJournals { get; set; } = 32;
         public bool DiscardVirtualMemory { get; set; } = true;
+        public bool UseSequentialReadAheadHintForJournalRecovery { get; set; } = true;
         
         private readonly Logger _log;
 

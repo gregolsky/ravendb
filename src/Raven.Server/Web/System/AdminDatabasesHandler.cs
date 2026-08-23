@@ -12,7 +12,6 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Corax;
@@ -273,21 +272,31 @@ namespace Raven.Server.Web.System
                                                             $"To use Prefixed Sharding, all cluster nodes must be running version 6.2 or later.");
                 }
 
+                var dataAlreadyExists = false;
+
                 using (var raw = new RawDatabaseRecord(context, json))
                 {
                     foreach (var rawDatabaseRecord in raw.AsShardsOrNormal())
                     {
-                        if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(rawDatabaseRecord.DatabaseName) == false)
+                        if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(rawDatabaseRecord.DatabaseName) == false
+                            && Server.ServerStore.Cluster.DatabaseExists(rawDatabaseRecord.DatabaseName) == false)
                         {
-                            using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(rawDatabaseRecord.DatabaseName, "Checking if we need to recreate indexes"))
-                                RecreateIndexes(rawDatabaseRecord.DatabaseName, databaseRecord);
+                            using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(rawDatabaseRecord.DatabaseName, "Checking if database state needs to be updated (including recreating indexes)"))
+                            {
+                                RecreateDatabase(rawDatabaseRecord.DatabaseName, databaseRecord, rawDatabaseRecord.Settings, out var exists);
+                                dataAlreadyExists |= exists;
+                            }
                         }
                     }
                 }
 
-                if (databaseRecord.SupportedFeatures == null || databaseRecord.SupportedFeatures.Count == 0)
+                if (dataAlreadyExists == false && (databaseRecord.SupportedFeatures == null || databaseRecord.SupportedFeatures.Count == 0))
                 {
-                    databaseRecord.SupportedFeatures = new List<string> { Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix };
+                    databaseRecord.SupportedFeatures = new List<string>
+                    {
+                        Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix,
+                        Constants.DatabaseRecord.SupportedFeatures.ThrowControlCharactersInIdentifier
+                    };
                 }
 
                 var (newIndex, topology, nodeUrlsAddedTo) = await CreateDatabase(databaseRecord.DatabaseName, databaseRecord, context, replicationFactor, index, raftRequestId);
@@ -342,14 +351,16 @@ namespace Raven.Server.Web.System
             return false;
         }
 
-        private void RecreateIndexes(string databaseName, DatabaseRecord databaseRecord)
+        private void RecreateDatabase(string databaseName, DatabaseRecord databaseRecord, Dictionary<string, string> settings, out bool dataAlreadyExists)
         {
-            var databaseConfiguration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(databaseName, true, true, true, databaseRecord);
-            if (databaseConfiguration.Indexing.RunInMemory ||
-                Directory.Exists(databaseConfiguration.Indexing.StoragePath.FullPath) == false)
-            {
+            dataAlreadyExists = false;
+
+            if (Server.ServerStore.Cluster.DatabaseExists(databaseName))
                 return;
-            }
+
+            var databaseConfiguration = DatabasesLandlord.CreateDatabaseConfiguration(ServerStore, databaseName, settings);
+            if (databaseConfiguration.Core.RunInMemory || Directory.Exists(databaseConfiguration.Core.DataDirectory.FullPath) == false)
+                return;
 
             var addToInitLog = new Action<LogMode, string>((logMode, txt) =>
             {
@@ -371,10 +382,32 @@ namespace Raven.Server.Web.System
                 var options = InitializeOptions.SkipLoadingDatabaseRecord;
                 documentDatabase.Initialize(options);
 
-                var indexesPath = databaseConfiguration.Indexing.StoragePath.FullPath;
+                documentDatabase.DocumentsStorage.ResetLastCompletedClusterTransactionIndex();
+
+                if (documentDatabase.DocumentsStorage.Environment.IsNew == false)
+                {
+                    dataAlreadyExists = true;
+
+                    using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var persisted = DocumentsStorage.ReadSupportedFeatures(ctx.Transaction.InnerTransaction);
+
+                        if (databaseRecord.SupportedFeatures == null || databaseRecord.SupportedFeatures.Count == 0)
+                            databaseRecord.SupportedFeatures = persisted;
+
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Database '{databaseName}' is being created over existing data. Restored SupportedFeatures from storage: [{string.Join(", ", databaseRecord.SupportedFeatures)}]");
+                    }
+                }
+
+                // recrate the indexes on the new database
+                if (databaseConfiguration.Indexing.RunInMemory || Directory.Exists(databaseConfiguration.Indexing.StoragePath.FullPath) == false)
+                    return;
+
                 var sideBySideIndexes = new Dictionary<string, IndexDefinition>();
 
-                foreach (var indexPath in Directory.GetDirectories(indexesPath))
+                foreach (var indexPath in Directory.GetDirectories(databaseConfiguration.Indexing.StoragePath.FullPath))
                 {
                     Index index = null;
                     try
@@ -1518,17 +1551,6 @@ namespace Raven.Server.Web.System
 
                                     await smuggler.ExecuteAsync();
                                 }
-
-                                if (LoggingSource.AuditLog.IsInfoEnabled)
-                                {
-                                    using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                                    {
-                                        var configurationString = context.ReadObject(configuration.ToAuditJson(), nameof(configuration)).ToString();
-                                        LogAuditFor(databaseName, "IMPORT",
-                                            $"{EnumHelper.GetDescription(OperationType.MigrationFromLegacyData)} " +
-                                            $"using configuration: '{configurationString}'");
-                                    }
-                                }
                             }
                         }
                         catch (Exception e)
@@ -1578,6 +1600,17 @@ namespace Raven.Server.Web.System
                     });
                 },
                 token: token);
+
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                {
+                    var configurationString = context.ReadObject(configuration.ToAuditJson(), nameof(configuration)).ToString();
+                    LogAuditFor(databaseName, "IMPORT",
+                        $"{EnumHelper.GetDescription(OperationType.MigrationFromLegacyData)} " +
+                        $"using configuration: '{configurationString}'");
+                }
+            }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))

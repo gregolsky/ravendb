@@ -118,6 +118,7 @@ export default function DatabaseCustomSorters() {
                     fetchStatus={asyncGetDatabaseSorters.status}
                     reload={asyncGetDatabaseSorters.execute}
                     serverWideSorterNames={asyncGetServerWideSorters.result?.map((x) => x.Name) ?? []}
+                    takenNames={sorters.map((s) => s.name).filter(Boolean)}
                     remove={removeSorter}
                     markAsSaved={markAsSaved}
                 />
@@ -125,7 +126,11 @@ export default function DatabaseCustomSorters() {
                 <HrHeader
                     right={
                         hasServerWideCustomSorters ? (
-                            <a href={appUrl.forServerWideCustomSorters()} target="_blank">
+                            <a
+                                href={appUrl.forServerWideCustomSorters()}
+                                target="_blank"
+                                title="Go to the server-wide custom sorters view"
+                            >
                                 <Icon icon="link" />
                                 Server-wide custom sorters
                             </a>
